@@ -1,0 +1,1054 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard Utilisasi SPP 2026</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', Arial, sans-serif; background: #e6eaf3; color: #1a2332; }
+
+  /* ── Loading overlay ─────────────────────────── */
+  .loading-overlay { display:none; position:fixed; inset:0; background:rgba(11,29,56,0.65); z-index:19999; align-items:center; justify-content:center; flex-direction:column; gap:14px; }
+  .loading-overlay.active { display:flex; }
+  .loading-spinner { width:42px; height:42px; border:4px solid rgba(255,255,255,0.25); border-top-color:#c9a227; border-radius:50%; animation:spin 0.8s linear infinite; }
+  .loading-text { color:white; font-size:0.9rem; font-weight:600; }
+  @keyframes spin { to { transform:rotate(360deg); } }
+
+  .header { background:linear-gradient(135deg,#0b1d38 0%,#1c3b6e 55%,#1e508a 100%); color:white; padding:16px 32px 14px; box-shadow:0 3px 10px rgba(0,0,0,0.35); border-bottom:3px solid #c9a227; }
+  .header-top { display:flex; align-items:center; gap:18px; margin-bottom:6px; justify-content:space-between; }
+  .header-left { display:flex; align-items:center; gap:18px; }
+  .stip-logo { width:58px; height:58px; flex-shrink:0; object-fit:contain; filter:drop-shadow(0 2px 4px rgba(0,0,0,0.35)); }
+  .header h1 { font-size:1.25rem; font-weight:700; letter-spacing:0.3px; }
+  .header-sub { font-size:0.78rem; opacity:0.82; }
+  .header-badge { margin-top:8px; display:inline-block; background:rgba(201,162,39,0.18); border:1px solid rgba(201,162,39,0.55); padding:3px 14px; border-radius:20px; font-size:0.72rem; letter-spacing:1px; text-transform:uppercase; color:#f0d98a; }
+
+  .header-auth { display:flex; flex-direction:column; align-items:flex-end; gap:6px; flex-shrink:0; }
+  .auth-user-info { display:flex; align-items:center; gap:7px; }
+  .auth-username { font-size:0.83rem; font-weight:700; color:white; }
+  .auth-role-badge { font-size:0.68rem; font-weight:700; padding:2px 8px; border-radius:10px; }
+  .auth-role-badge.guest { background:rgba(255,255,255,0.15); color:#d0d8e8; }
+  .auth-role-badge.admin { background:rgba(201,162,39,0.3); color:#f0d98a; border:1px solid rgba(201,162,39,0.5); }
+  .auth-action-btn { padding:5px 12px; border-radius:6px; font-size:0.75rem; font-weight:700; cursor:pointer; border:1px solid rgba(255,255,255,0.3); transition:opacity 0.15s; }
+  .auth-action-btn.login  { background:rgba(201,162,39,0.25); color:#f0d98a; }
+  .auth-action-btn.login:hover  { background:rgba(201,162,39,0.4); }
+  .auth-action-btn.logout { background:rgba(255,255,255,0.1); color:#d0d8e8; }
+  .auth-action-btn.logout:hover { background:rgba(255,255,255,0.2); }
+
+  .modal-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.6); z-index:9990; align-items:center; justify-content:center; backdrop-filter:blur(2px); }
+  .modal-overlay.open { display:flex; }
+  @keyframes modalIn { from{opacity:0;transform:scale(0.93);}to{opacity:1;transform:scale(1);} }
+  .modal-header { background:linear-gradient(135deg,#0b1d38,#1c3b6e); padding:16px 20px; display:flex; align-items:center; justify-content:space-between; border-bottom:2px solid #c9a227; }
+  .modal-header-title { color:white; font-size:0.95rem; font-weight:700; }
+  .modal-close-btn { background:rgba(255,255,255,0.12); border:1px solid rgba(255,255,255,0.25); color:white; width:26px; height:26px; border-radius:50%; cursor:pointer; font-size:0.85rem; display:flex; align-items:center; justify-content:center; }
+  .modal-close-btn:hover { background:rgba(255,255,255,0.28); }
+
+  .login-modal { background:white; border-radius:12px; width:360px; max-width:95vw; box-shadow:0 12px 40px rgba(0,0,0,0.35); overflow:hidden; animation:modalIn 0.2s ease; }
+  .login-body { padding:22px 24px 20px; }
+  .login-field { margin-bottom:14px; }
+  .login-field label { display:block; font-size:0.8rem; font-weight:600; color:#4a5568; margin-bottom:5px; }
+  .login-field input { width:100%; padding:9px 12px; border:1.5px solid #cbd5e0; border-radius:6px; font-size:0.85rem; color:#2d3748; background:#f8fafc; }
+  .login-field input:focus { outline:none; border-color:#1c3b6e; box-shadow:0 0 0 2px rgba(28,59,110,0.12); }
+  .login-msg { font-size:0.78rem; color:#c0392b; font-weight:600; min-height:18px; margin-bottom:10px; }
+  .login-submit-btn { width:100%; padding:10px; background:linear-gradient(135deg,#1c3b6e,#2a5aaa); color:white; border:none; border-radius:6px; font-size:0.88rem; font-weight:700; cursor:pointer; }
+  .login-submit-btn:hover { opacity:0.88; }
+  .login-hint { font-size:0.72rem; color:#a0aec0; text-align:center; margin-top:10px; }
+
+  .edit-modal { background:white; border-radius:12px; width:680px; max-width:96vw; max-height:92vh; box-shadow:0 12px 40px rgba(0,0,0,0.35); overflow:hidden; display:flex; flex-direction:column; animation:modalIn 0.2s ease; }
+  .edit-modal-body { padding:20px 24px; overflow-y:auto; flex:1; }
+  .edit-form-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:12px 14px; align-items:end; }
+  .edit-form-grid .span2 { grid-column:span 2; }
+  .edit-form-grid .span3 { grid-column:span 3; }
+  .edit-field { display:flex; flex-direction:column; gap:5px; }
+  .edit-field label { font-size:0.78rem; font-weight:700; color:#4a5568; }
+  .edit-field input,.edit-field select { width:100%; padding:8px 10px; border:1.5px solid #cbd5e0; border-radius:6px; font-size:0.83rem; color:#2d3748; background:white; min-width:unset; }
+  .edit-field input:focus,.edit-field select:focus { outline:none; border-color:#1c3b6e; box-shadow:0 0 0 2px rgba(28,59,110,0.1); }
+  .edit-section-label { font-size:0.8rem; font-weight:700; color:#4a5568; margin:16px 0 8px; }
+  .edit-section-label span { font-size:0.72rem; font-weight:400; color:#a0aec0; }
+  .edit-static-note { font-size:0.72rem; color:#7c5c00; background:#fef3c7; border:1px solid #f0d070; border-radius:6px; padding:6px 10px; margin-bottom:14px; }
+  .edit-existing-photos { display:none; margin-bottom:10px; }
+  .edit-existing-photos-label { font-size:0.75rem; font-weight:700; color:#4a5568; margin-bottom:6px; }
+  .edit-photo-list { display:flex; flex-wrap:wrap; gap:8px; }
+  .edit-photo-item { position:relative; display:flex; flex-direction:column; align-items:center; gap:3px; }
+  .edit-photo-thumb { width:64px; height:64px; object-fit:cover; border-radius:6px; border:1.5px solid #dde3ec; }
+  .edit-photo-name { font-size:0.62rem; color:#718096; max-width:64px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; text-align:center; }
+  .edit-photo-del { position:absolute; top:-5px; right:-5px; background:#e53e3e; color:white; border:none; border-radius:50%; width:18px; height:18px; font-size:9px; cursor:pointer; display:flex; align-items:center; justify-content:center; }
+  .edit-photo-del:hover { background:#c53030; }
+  .edit-msg { font-size:0.78rem; font-weight:600; min-height:18px; padding:4px 0; }
+  .edit-msg.success { color:#0e7c61; }
+  .edit-msg.error   { color:#c0392b; }
+  .edit-footer { display:flex; gap:10px; padding:14px 24px; background:#f8fafc; border-top:1px solid #e2e8f0; flex-shrink:0; }
+  .edit-save-btn { flex:1; padding:10px; background:linear-gradient(135deg,#1c3b6e,#2a5aaa); color:white; border:none; border-radius:7px; font-size:0.88rem; font-weight:700; cursor:pointer; }
+  .edit-save-btn:hover { opacity:0.88; }
+  .edit-cancel-btn { padding:10px 18px; background:white; color:#4a5568; border:1.5px solid #cbd5e0; border-radius:7px; font-size:0.85rem; font-weight:600; cursor:pointer; }
+  .edit-cancel-btn:hover { background:#f1f5f9; }
+
+  .photo-drop-zone { border:2px dashed #c9a227; border-radius:8px; background:#fff; cursor:pointer; min-height:72px; display:flex; align-items:center; justify-content:center; transition:background 0.15s,border-color 0.15s; overflow:hidden; }
+  .photo-drop-zone:hover,.photo-drop-zone.drag-over { background:#fffbec; border-color:#a07800; }
+  .photo-drop-content { text-align:center; padding:10px 20px; pointer-events:none; }
+  .photo-drop-icon { font-size:1.4rem; }
+  .photo-drop-text { font-size:0.8rem; font-weight:600; color:#4a5568; margin-top:2px; }
+  .photo-drop-hint { font-size:0.7rem; color:#a0aec0; }
+  .pending-preview { display:flex; align-items:center; gap:10px; padding:8px 12px; width:100%; }
+  .pending-preview img { width:52px; height:52px; object-fit:cover; border-radius:5px; border:1px solid #e2e8f0; flex-shrink:0; }
+  .pending-info { flex:1; overflow:hidden; }
+  .pending-name { font-size:0.78rem; font-weight:600; color:#2d3748; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .pending-size { font-size:0.7rem; color:#718096; margin-top:2px; }
+  .clear-photo-btn { background:#e53e3e; color:white; border:none; border-radius:50%; width:22px; height:22px; font-size:11px; cursor:pointer; flex-shrink:0; display:flex; align-items:center; justify-content:center; }
+
+  .month-tabs { background:white; display:flex; gap:0; border-bottom:2px solid #dde3ec; padding:0 24px; overflow-x:auto; }
+  .month-tab { padding:12px 22px; cursor:pointer; font-size:0.9rem; font-weight:500; color:#5a6e8a; border-bottom:3px solid transparent; margin-bottom:-2px; white-space:nowrap; transition:all 0.18s; }
+  .month-tab:hover { color:#1c3b6e; background:#f0f4fb; }
+  .month-tab.active { color:#1c3b6e; border-bottom-color:#c9a227; font-weight:700; }
+  .controls { background:white; padding:14px 24px; display:flex; gap:16px; flex-wrap:wrap; align-items:center; border-bottom:1px solid #e2e8f0; }
+  .control-group { display:flex; align-items:center; gap:8px; }
+  .control-group label { font-size:0.82rem; font-weight:600; color:#4a5568; }
+  select { padding:7px 12px; border:1px solid #cbd5e0; border-radius:6px; font-size:0.83rem; color:#2d3748; background:#f8fafc; cursor:pointer; min-width:220px; }
+  select:focus { outline:none; border-color:#c9a227; box-shadow:0 0 0 2px rgba(201,162,39,0.18); }
+  .metric-btns { display:flex; gap:4px; }
+  .metric-btn { padding:7px 14px; border:1px solid #cbd5e0; border-radius:6px; font-size:0.8rem; font-weight:600; cursor:pointer; transition:all 0.15s; background:#f8fafc; color:#4a5568; }
+  .metric-btn.active-fr  { background:#1c3b6e; color:white; border-color:#1c3b6e; }
+  .metric-btn.active-jlh { background:#0e7c61; color:white; border-color:#0e7c61; }
+  .metric-btn.active-drs { background:#7a4600; color:white; border-color:#7a4600; }
+
+  .summary-cards { display:grid; grid-template-columns:repeat(4,1fr); gap:14px; padding:20px 24px 6px; }
+  .card { background:white; border-radius:10px; padding:16px 20px; box-shadow:0 1px 5px rgba(0,0,0,0.09); border-left:4px solid #1c3b6e; }
+  .card.card-jlh  { border-left-color:#0e7c61; }
+  .card.card-drs  { border-left-color:#7a4600; }
+  .card.card-days { border-left-color:#c9a227; }
+  .card-label { font-size:0.72rem; font-weight:600; color:#718096; text-transform:uppercase; letter-spacing:0.5px; }
+  .card-value { font-size:1.8rem; font-weight:800; color:#1a2332; margin:4px 0 2px; }
+  .card-sub { font-size:0.72rem; color:#a0aec0; }
+
+  .overview-section { margin:18px 24px 0; background:white; border-radius:12px; box-shadow:0 1px 4px rgba(0,0,0,0.07); overflow:hidden; }
+  .overview-header { background:linear-gradient(90deg,#0b1d38 0%,#1c3b6e 100%); color:white; padding:14px 22px; border-bottom:2px solid #c9a227; }
+  .overview-title { font-size:0.95rem; font-weight:700; }
+  .overview-sub { font-size:0.75rem; opacity:0.75; margin-top:2px; }
+  .overview-charts { display:grid; grid-template-columns:repeat(3,1fr); border-bottom:1px solid #edf2f7; }
+  .overview-card { padding:14px 18px 18px; border-right:1px solid #edf2f7; }
+  .overview-card:last-child { border-right:none; }
+  .ov-label { font-size:0.75rem; font-weight:700; color:#4a5568; text-transform:uppercase; letter-spacing:0.4px; margin-bottom:6px; text-align:center; }
+  .ov-total { text-align:center; font-size:1.3rem; font-weight:800; color:#1a2332; margin-bottom:10px; }
+  .ov-total span { font-size:0.72rem; font-weight:500; color:#718096; margin-left:4px; }
+  .ov-chart-wrap { position:relative; height:200px; }
+  .ov-legend { display:flex; flex-wrap:wrap; gap:7px 18px; padding:14px 22px 18px; background:#f8fafc; }
+  .ov-legend-item { display:flex; align-items:center; gap:7px; font-size:0.75rem; color:#2d3748; }
+  .ov-legend-dot { width:13px; height:13px; border-radius:3px; flex-shrink:0; }
+
+  .input-section { background:#f0f4f8; border-bottom:1px solid #dde3ec; padding:16px 24px 20px; border-left:3px solid #1c3b6e; }
+  .input-section-header { display:flex; align-items:center; gap:14px; margin-bottom:14px; }
+  .input-section-title { font-size:0.92rem; font-weight:700; color:#1c3b6e; }
+  .input-section-sub { font-size:0.78rem; color:#718096; }
+  .form-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:12px 16px; align-items:end; }
+  .form-group { display:flex; flex-direction:column; gap:5px; }
+  .form-group.span2 { grid-column:span 2; }
+  .form-group.span3 { grid-column:span 3; }
+  .form-group label { font-size:0.78rem; font-weight:700; color:#4a5568; }
+  .req { color:#c0392b; margin-left:2px; }
+  .form-input { padding:8px 11px; border:1.5px solid #cbd5e0; border-radius:6px; font-size:0.83rem; color:#2d3748; background:white; width:100%; }
+  .form-input:focus { outline:none; border-color:#1c3b6e; box-shadow:0 0 0 2px rgba(28,59,110,0.1); }
+  .form-divider { grid-column:span 3; border:none; border-top:1px dashed #cbd5e0; margin:4px 0; }
+  .form-photo-label { font-size:0.78rem; font-weight:700; color:#4a5568; }
+  .form-photo-hint { font-size:0.72rem; font-weight:400; color:#a0aec0; margin-left:4px; }
+  .form-submit-btn { width:100%; padding:10px; background:linear-gradient(135deg,#0e7c61,#128d6e); color:white; border:none; border-radius:6px; font-size:0.88rem; font-weight:700; cursor:pointer; }
+  .form-submit-btn:hover { opacity:0.88; }
+  .form-msg { font-size:0.78rem; padding:6px 0 0; min-height:20px; font-weight:600; }
+  .form-msg.success { color:#0e7c61; }
+  .form-msg.error   { color:#c0392b; }
+
+  .main-content { display:grid; grid-template-columns:1fr; gap:14px; padding:14px 24px 24px; }
+  .chart-panel { background:white; border-radius:10px; padding:20px; box-shadow:0 1px 5px rgba(0,0,0,0.09); border-top:3px solid #c9a227; }
+  .chart-title { font-size:0.92rem; font-weight:700; color:#2d3748; margin-bottom:14px; }
+  .chart-title span { font-size:0.78rem; font-weight:400; color:#718096; margin-left:8px; }
+  .chart-wrap { position:relative; height:280px; }
+  .table-panel { background:white; border-radius:10px; padding:20px; box-shadow:0 1px 5px rgba(0,0,0,0.09); overflow-x:auto; border-top:3px solid #c9a227; }
+  .table-title { font-size:0.92rem; font-weight:700; color:#2d3748; margin-bottom:14px; }
+  table { width:100%; border-collapse:collapse; font-size:0.82rem; }
+  th { background:#eef2fa; padding:9px 12px; text-align:left; font-weight:700; color:#1c3b6e; font-size:0.75rem; text-transform:uppercase; letter-spacing:0.4px; border-bottom:2px solid #c9a227; white-space:nowrap; }
+  td { padding:8px 12px; border-bottom:1px solid #edf2f7; color:#2d3748; vertical-align:top; }
+  tr:hover td { background:#f8fafc; }
+  .badge { display:inline-block; padding:2px 8px; border-radius:10px; font-size:0.72rem; font-weight:700; }
+  .badge-fr  { background:#dce8f7; color:#1c3b6e; }
+  .badge-jlh { background:#d1fae5; color:#065f46; }
+  .badge-drs { background:#fef3c7; color:#78350f; }
+  .no-data { text-align:center; padding:48px 24px; color:#a0aec0; font-size:0.9rem; }
+  .no-data-icon { font-size:2.5rem; margin-bottom:8px; }
+  .kegiatan-cell { min-width:150px; font-size:0.8rem; line-height:1.45; }
+  .pengguna-cell { min-width:160px; font-size:0.8rem; line-height:1.45; }
+  .cell-empty { color:#c0c8d8; font-size:0.78rem; }
+  .dynamic-row td { background:#fdfff8; }
+  .dynamic-row:hover td { background:#f5fbee; }
+  .row-badge { display:inline-block; font-size:0.62rem; border-radius:8px; padding:1px 5px; margin-left:4px; vertical-align:middle; }
+  .row-badge.new  { background:#e8f5e9; color:#2e7d32; border:1px solid #a5d6a7; }
+  .row-badge.edit { background:#e3f2fd; color:#1565c0; border:1px solid #90caf9; }
+  .action-cell { white-space:nowrap; }
+  .row-edit-btn { background:white; border:1px solid #1c3b6e; color:#1c3b6e; border-radius:5px; padding:3px 8px; font-size:0.73rem; cursor:pointer; transition:background 0.12s,color 0.12s; margin-right:4px; }
+  .row-edit-btn:hover { background:#1c3b6e; color:white; }
+  .row-del-btn  { background:white; border:1px solid #e53e3e; color:#e53e3e; border-radius:5px; padding:3px 8px; font-size:0.73rem; cursor:pointer; transition:background 0.12s,color 0.12s; }
+  .row-del-btn:hover  { background:#e53e3e; color:white; }
+  .foto-cell { vertical-align:top; padding:8px 10px; }
+  .foto-empty { color:#c0c8d8; font-size:0.78rem; text-align:center; }
+  .foto-thumb-wrap { display:inline-block; position:relative; margin:3px; vertical-align:top; }
+  .foto-thumb { display:block; max-width:280px; max-height:280px; width:auto; height:auto; border-radius:6px; border:1.5px solid #dde3ec; cursor:zoom-in; transition:transform 0.15s,box-shadow 0.15s,border-color 0.15s; object-fit:cover; }
+  .foto-thumb:hover { transform:scale(1.03); box-shadow:0 4px 14px rgba(0,0,0,0.18); border-color:#c9a227; }
+  .foto-del-btn { position:absolute; top:4px; right:4px; background:rgba(197,40,40,0.88); color:white; border:none; border-radius:50%; width:20px; height:20px; font-size:10px; cursor:pointer; display:none; align-items:center; justify-content:center; }
+  .foto-thumb-wrap:hover .foto-del-btn { display:flex; }
+  .foto-del-btn:hover { background:rgba(197,40,40,1); }
+  .lightbox-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.88); z-index:9999; align-items:center; justify-content:center; cursor:zoom-out; backdrop-filter:blur(3px); }
+  .lightbox-overlay.active { display:flex; }
+  .lightbox-inner { position:relative; max-width:92vw; max-height:92vh; display:flex; flex-direction:column; align-items:center; cursor:default; animation:modalIn 0.18s ease; }
+  .lightbox-img { max-width:90vw; max-height:82vh; object-fit:contain; border-radius:8px; box-shadow:0 8px 40px rgba(0,0,0,0.6); display:block; }
+  .lightbox-caption { color:rgba(255,255,255,0.82); font-size:0.8rem; margin-top:10px; text-align:center; max-width:80vw; }
+  .lightbox-close { position:absolute; top:-36px; right:0; background:rgba(255,255,255,0.15); border:1px solid rgba(255,255,255,0.3); color:white; font-size:1rem; width:30px; height:30px; border-radius:50%; cursor:pointer; display:flex; align-items:center; justify-content:center; }
+  .lightbox-close:hover { background:rgba(255,255,255,0.28); }
+  .lightbox-nav { position:absolute; top:50%; transform:translateY(-50%); background:rgba(255,255,255,0.12); border:1px solid rgba(255,255,255,0.25); color:white; font-size:1.3rem; width:38px; height:38px; border-radius:50%; cursor:pointer; display:flex; align-items:center; justify-content:center; user-select:none; }
+  .lightbox-nav:hover { background:rgba(255,255,255,0.25); }
+  .lightbox-nav.prev { left:-52px; }
+  .lightbox-nav.next { right:-52px; }
+  .lightbox-counter { color:rgba(255,255,255,0.6); font-size:0.72rem; margin-top:5px; }
+
+  @media(max-width:768px){
+    .summary-cards{grid-template-columns:repeat(2,1fr);}
+    .header h1{font-size:1rem;}
+    .header-auth{display:none;}
+    .controls,.main-content{padding:12px 16px;}
+    .summary-cards{padding:14px 16px 4px;}
+    .overview-section{margin:14px 16px 0;}
+    .overview-charts{grid-template-columns:1fr;}
+    .overview-card{border-right:none;border-bottom:1px solid #edf2f7;}
+    .input-section{padding:12px 16px;}
+    .form-grid{grid-template-columns:1fr 1fr;}
+    .form-group.span3,.form-divider{grid-column:span 2;}
+    .edit-form-grid{grid-template-columns:1fr 1fr;}
+    .edit-form-grid .span3{grid-column:span 2;}
+  }
+</style>
+</head>
+<body>
+
+<!-- Loading -->
+<div class="loading-overlay" id="loadingOverlay">
+  <div class="loading-spinner"></div>
+  <div class="loading-text" id="loadingText">Memuat data...</div>
+</div>
+
+<!-- Lightbox -->
+<div id="lightbox" class="lightbox-overlay" onclick="closeLightbox()">
+  <div class="lightbox-inner" onclick="event.stopPropagation()">
+    <button class="lightbox-close" onclick="closeLightbox()">✕</button>
+    <button class="lightbox-nav prev" id="lbPrev" onclick="lbNavigate(-1)">&#8249;</button>
+    <img class="lightbox-img" id="lightboxImg" src="" alt="">
+    <button class="lightbox-nav next" id="lbNext" onclick="lbNavigate(1)">&#8250;</button>
+    <div class="lightbox-caption" id="lightboxCaption"></div>
+    <div class="lightbox-counter" id="lightboxCounter"></div>
+  </div>
+</div>
+
+<!-- Login Modal -->
+<div id="loginModal" class="modal-overlay" onclick="closeLoginModal()">
+  <div class="login-modal" onclick="event.stopPropagation()">
+    <div class="modal-header">
+      <div class="modal-header-title">🔑 Login Administrator</div>
+      <button class="modal-close-btn" onclick="closeLoginModal()">✕</button>
+    </div>
+    <div class="login-body">
+      <div class="login-field">
+        <label>Username</label>
+        <input type="text" id="loginUsername" placeholder="Masukkan username" autocomplete="username"
+               onkeydown="if(event.key==='Enter')handleLoginSubmit()">
+      </div>
+      <div class="login-field">
+        <label>Password</label>
+        <input type="password" id="loginPassword" placeholder="Masukkan password" autocomplete="current-password"
+               onkeydown="if(event.key==='Enter')handleLoginSubmit()">
+      </div>
+      <div id="loginMsg" class="login-msg"></div>
+      <button class="login-submit-btn" onclick="handleLoginSubmit()">Masuk</button>
+      <div class="login-hint">Guest: guest / guest &nbsp;|&nbsp; Admin: admin / adminSTIP</div>
+    </div>
+  </div>
+</div>
+
+<!-- Edit Modal -->
+<div id="editModal" class="modal-overlay" onclick="closeEditModal()">
+  <div class="edit-modal" onclick="event.stopPropagation()">
+    <div class="modal-header">
+      <div class="modal-header-title" id="editModalTitle">✏️ Edit Data Kegiatan</div>
+      <button class="modal-close-btn" onclick="closeEditModal()">✕</button>
+    </div>
+    <div class="edit-modal-body">
+      <div id="editStaticNote" class="edit-static-note" style="display:none;">
+        ℹ️ Ini adalah data statis. Perubahan akan disimpan sebagai entri baru yang menggantikan baris ini.
+      </div>
+      <div class="edit-form-grid">
+        <div class="edit-field">
+          <label>Tanggal <span class="req">*</span></label>
+          <input type="number" id="eTanggal" min="1" max="31" placeholder="1 – 31">
+        </div>
+        <div class="edit-field span2">
+          <label>Nama Lab / Simulator <span class="req">*</span></label>
+          <select id="eLab"></select>
+        </div>
+        <div class="edit-field span3">
+          <label>Kegiatan <span style="font-weight:400;color:#a0aec0;">(opsional)</span></label>
+          <input type="text" id="eKegiatan" placeholder="Contoh: Praktikum Navigasi, Kalibrasi...">
+        </div>
+        <div class="edit-field span3">
+          <label>Pengguna dan Jabatan <span style="font-weight:400;color:#a0aec0;">(opsional)</span></label>
+          <input type="text" id="ePengguna" placeholder="Contoh: Taruna Tingkat III">
+        </div>
+        <div class="edit-field">
+          <label>FR <span class="req">*</span></label>
+          <input type="number" id="eFR" min="0" placeholder="Sesi">
+        </div>
+        <div class="edit-field">
+          <label>JLH <span class="req">*</span></label>
+          <input type="number" id="eJLH" min="0" placeholder="Orang">
+        </div>
+        <div class="edit-field">
+          <label>DRS <span class="req">*</span></label>
+          <input type="number" id="eDRS" min="0" placeholder="Jam">
+        </div>
+      </div>
+      <div class="edit-section-label">📸 Foto Kegiatan <span>(opsional)</span></div>
+      <div id="editExistingPhotos" class="edit-existing-photos">
+        <div class="edit-existing-photos-label" id="editPhotosLabel"></div>
+        <div class="edit-photo-list" id="editPhotoList"></div>
+      </div>
+      <div class="photo-drop-zone" id="editDropZone"
+           onclick="document.getElementById('editPhotoFileInput').click()"
+           ondragover="handleEditDragOver(event)" ondragleave="handleEditDragLeave()"
+           ondrop="handleEditDrop(event)">
+        <input type="file" id="editPhotoFileInput" accept=".jpg,.jpeg,.png,.gif,.webp,.bmp" style="display:none">
+        <div class="photo-drop-content" id="editDropContent">
+          <div class="photo-drop-icon">🖼️</div>
+          <div class="photo-drop-text">Klik atau seret foto baru ke sini</div>
+          <div class="photo-drop-hint">JPG · PNG · GIF · WEBP · BMP &nbsp;|&nbsp; Maks. 1 MB</div>
+        </div>
+        <div id="editPhotoPreview" style="display:none;"></div>
+      </div>
+      <div id="editMsg" class="edit-msg"></div>
+    </div>
+    <div class="edit-footer">
+      <button class="edit-cancel-btn" type="button" onclick="closeEditModal()">Batal</button>
+      <button class="edit-save-btn"   type="button" onclick="saveEdit()">💾 Simpan Perubahan</button>
+    </div>
+  </div>
+</div>
+
+<!-- Header -->
+<div class="header">
+  <div class="header-top">
+    <div class="header-left">
+      <img src="https://stipindonesia.ac.id/images/logo-stip.png" class="stip-logo" alt="Logo STIP" onerror="this.style.display='none'">
+      <div>
+        <div class="header-sub">KEMENTERIAN PERHUBUNGAN — BADAN PENGEMBANGAN SDM PERHUBUNGAN</div>
+        <h1>SEKOLAH TINGGI ILMU PELAYARAN — UNIT SARANA PRAKTEK PELAUT (SPP)</h1>
+      </div>
+    </div>
+    <div class="header-auth" id="headerAuth"></div>
+  </div>
+  <div class="header-badge">Dashboard Utilisasi Sarana Praktek Pelaut 2026</div>
+</div>
+
+<div class="month-tabs" id="monthTabs"></div>
+
+<div class="controls">
+  <div class="control-group">
+    <label>Nama Lab / Simulator:</label>
+    <select id="labSelect" onchange="renderAll()">
+      <option value="ALL">— Semua Lab / Simulator —</option>
+    </select>
+  </div>
+  <div class="control-group">
+    <label>Metrik Tampilan:</label>
+    <div class="metric-btns">
+      <button class="metric-btn active-fr"  id="btn-fr"  onclick="toggleMetric('fr')">FR (Frekuensi)</button>
+      <button class="metric-btn active-jlh" id="btn-jlh" onclick="toggleMetric('jlh')">JLH (Orang)</button>
+      <button class="metric-btn active-drs" id="btn-drs" onclick="toggleMetric('drs')">DRS (Durasi)</button>
+    </div>
+  </div>
+</div>
+
+<!-- Tambah Data (admin only) -->
+<div class="input-section" id="inputSection" style="display:none;">
+  <div class="input-section-header">
+    <div class="input-section-title">📝 Tambah Data Kegiatan</div>
+    <div class="input-section-sub">Bulan aktif: <strong id="inputMonthLabel"></strong></div>
+  </div>
+  <form id="activityForm" onsubmit="submitActivity(event)" autocomplete="off">
+    <div class="form-grid">
+      <div class="form-group">
+        <label>Tanggal <span class="req">*</span></label>
+        <input type="number" id="fTanggal" class="form-input" min="1" max="31" placeholder="1 – 31" required>
+      </div>
+      <div class="form-group span2">
+        <label>Nama Lab / Simulator <span class="req">*</span></label>
+        <select id="fLab" class="form-input" required>
+          <option value="">— Pilih Lab / Simulator —</option>
+        </select>
+      </div>
+      <div class="form-group span3">
+        <label>Kegiatan <span class="req">*</span></label>
+        <input type="text" id="fKegiatan" class="form-input" placeholder="Contoh: Praktikum Navigasi, Kalibrasi Peralatan..." required>
+      </div>
+      <div class="form-group span3">
+        <label>Pengguna dan Jabatan <span class="req">*</span></label>
+        <input type="text" id="fPengguna" class="form-input" placeholder="Contoh: Taruna Tingkat III / Siswa DIKLAT Kepelautan" required>
+      </div>
+      <div class="form-group">
+        <label>FR <span class="req">*</span></label>
+        <input type="number" id="fFR" class="form-input" min="1" placeholder="Sesi" required>
+      </div>
+      <div class="form-group">
+        <label>JLH <span class="req">*</span></label>
+        <input type="number" id="fJLH" class="form-input" min="1" placeholder="Orang" required>
+      </div>
+      <div class="form-group">
+        <label>DRS <span class="req">*</span></label>
+        <input type="number" id="fDRS" class="form-input" min="1" placeholder="Jam" required>
+      </div>
+      <hr class="form-divider">
+      <div class="form-group span3" style="gap:7px;">
+        <label class="form-photo-label">📸 Foto Kegiatan
+          <span class="form-photo-hint">(opsional — dilampirkan ke Tanggal &amp; Lab di atas)</span>
+        </label>
+        <div class="photo-drop-zone" id="formDropZone"
+             onclick="document.getElementById('formPhotoInput').click()"
+             ondragover="handleFormDragOver(event)" ondragleave="handleFormDragLeave()"
+             ondrop="handleFormDrop(event)">
+          <input type="file" id="formPhotoInput" accept=".jpg,.jpeg,.png,.gif,.webp,.bmp" style="display:none">
+          <div class="photo-drop-content" id="formDropContent">
+            <div class="photo-drop-icon">🖼️</div>
+            <div class="photo-drop-text">Klik atau seret foto ke sini</div>
+            <div class="photo-drop-hint">JPG · PNG · GIF · WEBP · BMP &nbsp;|&nbsp; Maks. 1 MB</div>
+          </div>
+          <div id="formPhotoPreview" style="display:none;"></div>
+        </div>
+      </div>
+      <div class="form-group span3" style="margin-top:4px;">
+        <button type="submit" class="form-submit-btn">💾 Simpan Data Kegiatan</button>
+      </div>
+    </div>
+    <div id="formMsg" class="form-msg"></div>
+  </form>
+</div>
+
+<div class="summary-cards" id="summaryCards"></div>
+
+<div class="overview-section">
+  <div class="overview-header">
+    <div class="overview-title">Rekapitulasi Utilisasi Bulanan 2026</div>
+    <div class="overview-sub">Proporsi penggunaan per Lab / Simulator — seluruh bulan (Jan – Mei)</div>
+  </div>
+  <div class="overview-charts">
+    <div class="overview-card">
+      <div class="ov-label">Frekuensi Penggunaan (FR)</div>
+      <div class="ov-total" id="ovTotalFR">—</div>
+      <div class="ov-chart-wrap"><canvas id="ovFRChart"></canvas></div>
+    </div>
+    <div class="overview-card">
+      <div class="ov-label">Jumlah Peserta (JLH)</div>
+      <div class="ov-total" id="ovTotalJLH">—</div>
+      <div class="ov-chart-wrap"><canvas id="ovJLHChart"></canvas></div>
+    </div>
+    <div class="overview-card">
+      <div class="ov-label">Total Durasi / Jam (DRS)</div>
+      <div class="ov-total" id="ovTotalDRS">—</div>
+      <div class="ov-chart-wrap"><canvas id="ovDRSChart"></canvas></div>
+    </div>
+  </div>
+  <div class="ov-legend" id="ovLegend"></div>
+</div>
+
+<div class="main-content">
+  <div class="chart-panel">
+    <div class="chart-title">Utilisasi per Lab / Simulator <span>bulan ini</span></div>
+    <div class="chart-wrap"><canvas id="labChart"></canvas></div>
+  </div>
+  <div class="chart-panel">
+    <div class="chart-title" id="chartTitle">Utilisasi Harian</div>
+    <div class="chart-wrap"><canvas id="mainChart"></canvas></div>
+  </div>
+  <div class="table-panel">
+    <div class="table-title" id="tableTitle">Data Harian Detail</div>
+    <div id="tableBody"></div>
+  </div>
+</div>
+
+<script>
+// ── API helper ────────────────────────────────────────────
+async function apiFetch(url, opts = {}) {
+  const res = await fetch(url, {
+    ...opts,
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json', ...(opts.headers || {}) },
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || `HTTP ${res.status}`);
+  }
+  return res.json();
+}
+
+function showLoading(text = 'Memuat data...') {
+  document.getElementById('loadingText').textContent = text;
+  document.getElementById('loadingOverlay').classList.add('active');
+}
+function hideLoading() {
+  document.getElementById('loadingOverlay').classList.remove('active');
+}
+
+// ── Auth ─────────────────────────────────────────────────
+let currentRole = 'guest';
+function isAdmin() { return currentRole === 'admin'; }
+
+function renderLoginBadge() {
+  const el = document.getElementById('headerAuth');
+  if (isAdmin()) {
+    el.innerHTML = `<div class="auth-user-info"><span class="auth-username">Administrator</span><span class="auth-role-badge admin">Full Access</span></div>
+      <button class="auth-action-btn logout" onclick="logout()">Logout</button>`;
+  } else {
+    el.innerHTML = `<div class="auth-user-info"><span class="auth-username">👤 Guest</span><span class="auth-role-badge guest">Tampil Saja</span></div>
+      <button class="auth-action-btn login" onclick="openLoginModal()">🔑 Login Admin</button>`;
+  }
+}
+
+function openLoginModal() {
+  document.getElementById('loginUsername').value = '';
+  document.getElementById('loginPassword').value = '';
+  document.getElementById('loginMsg').textContent = '';
+  document.getElementById('loginModal').classList.add('open');
+  setTimeout(() => document.getElementById('loginUsername').focus(), 80);
+}
+function closeLoginModal() { document.getElementById('loginModal').classList.remove('open'); }
+
+async function handleLoginSubmit() {
+  const username = document.getElementById('loginUsername').value.trim();
+  const password = document.getElementById('loginPassword').value;
+  document.getElementById('loginMsg').textContent = '';
+  try {
+    const me = await apiFetch('/api/auth/login', {
+      method: 'POST',
+      body: JSON.stringify({ username, password })
+    });
+    currentRole = me.role;
+    closeLoginModal();
+    renderAll();
+  } catch (err) {
+    document.getElementById('loginMsg').textContent = `❌ ${err.message}`;
+  }
+}
+
+async function logout() {
+  await apiFetch('/api/auth/logout', { method: 'POST' }).catch(() => {});
+  currentRole = 'guest';
+  renderAll();
+}
+
+// ── Lightbox ─────────────────────────────────────────────
+let _lightboxPhotos = [], _lbCurrent = 0;
+function openLightbox(idx) { _lbCurrent = idx; _updateLightbox(); document.getElementById('lightbox').classList.add('active'); }
+function _updateLightbox() {
+  const p = _lightboxPhotos[_lbCurrent]; if (!p) return;
+  document.getElementById('lightboxImg').src             = p.src;
+  document.getElementById('lightboxCaption').textContent = p.caption;
+  document.getElementById('lightboxCounter').textContent = `${_lbCurrent+1} / ${_lightboxPhotos.length}`;
+  document.getElementById('lbPrev').style.display = _lbCurrent > 0 ? 'flex' : 'none';
+  document.getElementById('lbNext').style.display = _lbCurrent < _lightboxPhotos.length-1 ? 'flex' : 'none';
+}
+function lbNavigate(dir) { const n=_lbCurrent+dir; if(n>=0&&n<_lightboxPhotos.length){_lbCurrent=n;_updateLightbox();} }
+function closeLightbox() { document.getElementById('lightbox').classList.remove('active'); document.getElementById('lightboxImg').src=''; }
+
+// ── Photo validation + preview ─────────────────────────
+const PHOTO_TYPES = ['image/jpeg','image/png','image/gif','image/webp','image/bmp'];
+function validatePhoto(file) {
+  if (!PHOTO_TYPES.includes(file.type)) return 'Format tidak didukung. Gunakan JPG, PNG, GIF, WEBP, atau BMP.';
+  if (file.size > 1048576) return `Ukuran file (${(file.size/1024/1024).toFixed(2)} MB) melebihi batas 1 MB.`;
+  return null;
+}
+function readAsDataURL(file) {
+  return new Promise(r => { const fr = new FileReader(); fr.onload = e => r(e.target.result); fr.readAsDataURL(file); });
+}
+function showPendingInZone(dataUrl, file, contentId, previewId, clearFn) {
+  document.getElementById(contentId).style.display = 'none';
+  const area = document.getElementById(previewId);
+  area.style.display = 'block';
+  area.innerHTML = `<div class="pending-preview">
+    <img src="${dataUrl}" alt="preview">
+    <div class="pending-info"><div class="pending-name">${file.name}</div><div class="pending-size">${(file.size/1024).toFixed(1)} KB</div></div>
+    <button type="button" class="clear-photo-btn" onclick="${clearFn}()">✕</button></div>`;
+}
+
+// ── Form photo ────────────────────────────────────────────
+let _formPendingFile = null, _formPendingDataUrl = null;
+function handleFormDragOver(e) { e.preventDefault(); document.getElementById('formDropZone').classList.add('drag-over'); }
+function handleFormDragLeave() { document.getElementById('formDropZone').classList.remove('drag-over'); }
+function handleFormDrop(e) { e.preventDefault(); document.getElementById('formDropZone').classList.remove('drag-over'); const f=e.dataTransfer.files[0]; if(f)processFormPhoto(f); }
+async function processFormPhoto(file) {
+  const err = validatePhoto(file); if(err){showFormMsg(err,'error');return;}
+  _formPendingFile = file;
+  _formPendingDataUrl = await readAsDataURL(file);
+  showPendingInZone(_formPendingDataUrl, file, 'formDropContent', 'formPhotoPreview', 'clearFormPhoto');
+}
+function clearFormPhoto() {
+  _formPendingFile = _formPendingDataUrl = null;
+  document.getElementById('formPhotoInput').value = '';
+  document.getElementById('formDropContent').style.display = 'block';
+  document.getElementById('formPhotoPreview').style.display = 'none';
+  document.getElementById('formPhotoPreview').innerHTML = '';
+}
+
+// ── Edit photo ────────────────────────────────────────────
+let _editPendingFile = null, _editPendingDataUrl = null;
+function handleEditDragOver(e) { e.preventDefault(); document.getElementById('editDropZone').classList.add('drag-over'); }
+function handleEditDragLeave() { document.getElementById('editDropZone').classList.remove('drag-over'); }
+function handleEditDrop(e) { e.preventDefault(); document.getElementById('editDropZone').classList.remove('drag-over'); const f=e.dataTransfer.files[0]; if(f)processEditPhoto(f); }
+async function processEditPhoto(file) {
+  const err = validatePhoto(file); if(err){showEditMsg(err,'error');return;}
+  _editPendingFile = file;
+  _editPendingDataUrl = await readAsDataURL(file);
+  showPendingInZone(_editPendingDataUrl, file, 'editDropContent', 'editPhotoPreview', 'clearEditPhoto');
+}
+function clearEditPhoto() {
+  _editPendingFile = _editPendingDataUrl = null;
+  document.getElementById('editPhotoFileInput').value = '';
+  document.getElementById('editDropContent').style.display = 'block';
+  document.getElementById('editPhotoPreview').style.display = 'none';
+  document.getElementById('editPhotoPreview').innerHTML = '';
+}
+
+// ── Photo cache (loaded from API) ─────────────────────────
+const photoCache = {}; // key → photos[]
+
+function photoKey(month, lab, date) { return `${month}||${lab}||${date}`; }
+
+function renderPhotoCell(month, lab, date) {
+  const key    = photoKey(month, lab, date);
+  const photos = photoCache[key] || [];
+  if (!photos.length) return '<td class="foto-cell foto-empty"><span>—</span></td>';
+  const imgs = photos.map((p, idx) => {
+    const lbIdx = _lightboxPhotos.length;
+    _lightboxPhotos.push({ src: p.dataUrl, caption: `${p.filename} · ${lab} · ${date} ${month} 2026` });
+    const del = isAdmin()
+      ? `<button class="foto-del-btn" onclick="removePhoto('${key}',${idx},event)" title="Hapus">✕</button>` : '';
+    return `<div class="foto-thumb-wrap"><img class="foto-thumb" src="${p.dataUrl}" alt="${p.filename}"
+      onclick="openLightbox(${lbIdx})" title="Klik untuk zoom · ${p.filename}">${del}</div>`;
+  }).join('');
+  return `<td class="foto-cell">${imgs}</td>`;
+}
+
+async function removePhoto(key, idx, e) {
+  if (e) e.stopPropagation();
+  if (!isAdmin() || !confirm('Hapus foto ini?')) return;
+  showLoading('Menghapus foto...');
+  try {
+    const updated = await apiFetch('/api/photos', { method:'DELETE', body: JSON.stringify({ key, idx }) });
+    photoCache[key] = updated;
+    renderAll();
+  } catch (err) {
+    alert('Gagal menghapus foto: ' + err.message);
+  } finally { hideLoading(); }
+}
+
+// ── Activity cache (loaded from API) ──────────────────────
+const activityCache = {}; // month → Activity[]
+
+// ── Edit Modal ────────────────────────────────────────────
+let _editTarget = null, _tableRowData = [];
+
+function openEditModalByIdx(idx) { openEditModal(_tableRowData[idx]); }
+
+function openEditModal(row) {
+  _editTarget = { ...row, month: row.month || activeMonth };
+  clearEditPhoto();
+  document.getElementById('editModalTitle').textContent =
+    `✏️ Edit — ${row.date} ${_editTarget.month} · ${row.lab}`;
+  document.getElementById('editStaticNote').style.display = row.isStatic ? 'block' : 'none';
+  document.getElementById('eLab').innerHTML = DATA[_editTarget.month].labs
+    .map(l => `<option value="${l}"${l===row.lab?' selected':''}>${l}</option>`).join('');
+  document.getElementById('eTanggal').value  = row.date;
+  document.getElementById('eKegiatan').value = row.kegiatan || '';
+  document.getElementById('ePengguna').value = row.pengguna || '';
+  document.getElementById('eFR').value       = row.fr;
+  document.getElementById('eJLH').value      = row.jlh;
+  document.getElementById('eDRS').value      = row.drs;
+  document.getElementById('editMsg').textContent = '';
+  _renderEditExistingPhotos(_editTarget.month, row.lab, row.date);
+  document.getElementById('editModal').classList.add('open');
+  setTimeout(() => document.getElementById('eTanggal').focus(), 80);
+}
+
+function _renderEditExistingPhotos(month, lab, date) {
+  const key    = photoKey(month, lab, date);
+  const photos = photoCache[key] || [];
+  const el     = document.getElementById('editExistingPhotos');
+  if (!photos.length) { el.style.display='none'; return; }
+  el.style.display='block';
+  document.getElementById('editPhotosLabel').textContent = `Foto terlampir (${photos.length}):`;
+  document.getElementById('editPhotoList').innerHTML = photos.map((p,i) =>
+    `<div class="edit-photo-item">
+      <img src="${p.dataUrl}" class="edit-photo-thumb" alt="${p.filename}">
+      <div class="edit-photo-name">${p.filename}</div>
+      <button type="button" class="edit-photo-del" onclick="removeEditExistingPhoto('${key}',${i})">✕</button>
+    </div>`).join('');
+}
+
+async function removeEditExistingPhoto(key, idx) {
+  if (!confirm('Hapus foto ini?')) return;
+  showLoading('Menghapus foto...');
+  try {
+    const updated = await apiFetch('/api/photos', { method:'DELETE', body: JSON.stringify({ key, idx }) });
+    photoCache[key] = updated;
+    _renderEditExistingPhotos(_editTarget.month, _editTarget.lab, _editTarget.date);
+    renderTable(getFiltered());
+  } catch (err) {
+    alert('Gagal menghapus foto: ' + err.message);
+  } finally { hideLoading(); }
+}
+
+function closeEditModal() {
+  document.getElementById('editModal').classList.remove('open');
+  _editTarget = null;
+  clearEditPhoto();
+}
+
+async function saveEdit() {
+  const tanggal  = parseInt(document.getElementById('eTanggal').value);
+  const lab      = document.getElementById('eLab').value;
+  const kegiatan = document.getElementById('eKegiatan').value.trim();
+  const pengguna = document.getElementById('ePengguna').value.trim();
+  const fr       = parseInt(document.getElementById('eFR').value);
+  const jlh      = parseInt(document.getElementById('eJLH').value);
+  const drs      = parseInt(document.getElementById('eDRS').value);
+
+  if (!tanggal||!lab||isNaN(fr)||isNaN(jlh)||isNaN(drs)) {
+    showEditMsg('Tanggal, Lab, FR, JLH, dan DRS wajib diisi.','error'); return;
+  }
+  if (tanggal<1||tanggal>31) { showEditMsg('Tanggal harus antara 1 dan 31.','error'); return; }
+
+  const month   = _editTarget.month;
+  const updates = { month, date: tanggal, lab, kegiatan, pengguna, fr, jlh, drs };
+  showLoading('Menyimpan perubahan...');
+  try {
+    if (_editTarget.isStatic) {
+      const saved = await apiFetch('/api/activities', {
+        method: 'POST', body: JSON.stringify({ ...updates, overridesStatic: true })
+      });
+      if (!activityCache[month]) activityCache[month] = [];
+      activityCache[month].push(saved);
+    } else {
+      const updated = await apiFetch(`/api/activities/${_editTarget._id}`, {
+        method: 'PUT', body: JSON.stringify(updates)
+      });
+      const idx = activityCache[month]?.findIndex(a => a._id === _editTarget._id);
+      if (idx !== undefined && idx !== -1) activityCache[month][idx] = updated;
+    }
+    if (_editPendingDataUrl) {
+      const key     = photoKey(month, lab, tanggal);
+      const updated = await apiFetch('/api/photos', {
+        method: 'POST',
+        body: JSON.stringify({ key, dataUrl: _editPendingDataUrl, filename: _editPendingFile.name })
+      });
+      photoCache[key] = updated;
+    }
+    showEditMsg('✅ Data berhasil diperbarui!','success');
+    setTimeout(() => { closeEditModal(); renderAll(); }, 700);
+  } catch (err) {
+    showEditMsg('Gagal menyimpan: ' + err.message, 'error');
+  } finally { hideLoading(); }
+}
+
+function showEditMsg(text, type) {
+  const el = document.getElementById('editMsg');
+  el.textContent = text;
+  el.className   = 'edit-msg' + (type?' '+type:'');
+}
+
+// ── Activity delete ───────────────────────────────────────
+async function removeActivity(id, month, e) {
+  if (e) e.stopPropagation();
+  if (!isAdmin() || !confirm('Hapus data kegiatan ini?')) return;
+  showLoading('Menghapus data...');
+  try {
+    await apiFetch(`/api/activities/${id}`, { method: 'DELETE' });
+    if (activityCache[month])
+      activityCache[month] = activityCache[month].filter(a => a._id !== id);
+    renderAll();
+  } catch (err) {
+    alert('Gagal menghapus: ' + err.message);
+  } finally { hideLoading(); }
+}
+
+// ── Input Form ────────────────────────────────────────────
+function renderInputSection() {
+  const section = document.getElementById('inputSection');
+  if (!isAdmin()) { section.style.display='none'; return; }
+  section.style.display='block';
+  document.getElementById('inputMonthLabel').textContent = `${activeMonth} 2026`;
+  const filterLab = document.getElementById('labSelect').value;
+  document.getElementById('fLab').innerHTML =
+    '<option value="">— Pilih Lab / Simulator —</option>' +
+    DATA[activeMonth].labs.map(l =>
+      `<option value="${l}"${l===filterLab&&filterLab!=='ALL'?' selected':''}>${l}</option>`
+    ).join('');
+}
+
+async function submitActivity(e) {
+  e.preventDefault();
+  const tanggal  = parseInt(document.getElementById('fTanggal').value);
+  const lab      = document.getElementById('fLab').value;
+  const kegiatan = document.getElementById('fKegiatan').value.trim();
+  const pengguna = document.getElementById('fPengguna').value.trim();
+  const fr       = parseInt(document.getElementById('fFR').value);
+  const jlh      = parseInt(document.getElementById('fJLH').value);
+  const drs      = parseInt(document.getElementById('fDRS').value);
+
+  if (!tanggal||!lab||!kegiatan||!pengguna||!fr||!jlh||!drs) { showFormMsg('Semua field wajib diisi.','error'); return; }
+  if (tanggal<1||tanggal>31) { showFormMsg('Tanggal harus antara 1 dan 31.','error'); return; }
+
+  showLoading('Menyimpan data...');
+  try {
+    const saved = await apiFetch('/api/activities', {
+      method: 'POST',
+      body: JSON.stringify({ month: activeMonth, date: tanggal, lab, kegiatan, pengguna, fr, jlh, drs })
+    });
+    if (!activityCache[activeMonth]) activityCache[activeMonth] = [];
+    activityCache[activeMonth].push(saved);
+
+    if (_formPendingDataUrl) {
+      const key     = photoKey(activeMonth, lab, tanggal);
+      const updated = await apiFetch('/api/photos', {
+        method: 'POST',
+        body: JSON.stringify({ key, dataUrl: _formPendingDataUrl, filename: _formPendingFile.name })
+      });
+      photoCache[key] = updated;
+      clearFormPhoto();
+    }
+
+    showFormMsg(`✅ Tersimpan: ${tanggal} ${activeMonth} 2026 — ${lab}`, 'success');
+    document.getElementById('activityForm').reset();
+    renderInputSection();
+    renderAll();
+  } catch (err) {
+    showFormMsg('Gagal menyimpan: ' + err.message, 'error');
+  } finally { hideLoading(); }
+}
+
+function showFormMsg(text, type) {
+  const el = document.getElementById('formMsg');
+  el.textContent = text;
+  el.className   = 'form-msg' + (type?' '+type:'');
+}
+
+// ── Static Data ───────────────────────────────────────────
+const DATA = {
+  "Januari": {
+    "labs": ["CARGO HANDLING LABORATORY (CHL)", "ELECTRIC AND ELECTRONIC LABORATORY (EEL)", "ENGINEERING WORKSHOP", "MARINE ENGINEERING LABORATORY (MEL)", "BRIEFING ROOM", "LIQUID CARGO HANDLING SIMULATOR (LCHS)", "NAVIGATION AIDS SIMULATOR", "SHIP OPERATIONAL LABORATORY (SOL)", "COMPUTER BASED TRAINING (CBT) 1 & 2", "ENGINE ROOM CERTIFICATION SIMULATOR (ERCS)", "ENGINE ROOM GRAPHICS LABORATORY (ERGL)", "LANGUAGE TRAINING LABORATORY", "AUTOMATIC CONTROL SYSTEM LABORATORY (ACSL)"],
+    "daily": [{"date":5,"lab":"COMPUTER BASED TRAINING (CBT) 1 & 2","fr":1,"jlh":45,"drs":4},{"date":5,"lab":"LANGUAGE TRAINING LABORATORY","fr":1,"jlh":45,"drs":4},{"date":6,"lab":"COMPUTER BASED TRAINING (CBT) 1 & 2","fr":1,"jlh":38,"drs":4},{"date":6,"lab":"LANGUAGE TRAINING LABORATORY","fr":1,"jlh":38,"drs":4},{"date":7,"lab":"COMPUTER BASED TRAINING (CBT) 1 & 2","fr":1,"jlh":35,"drs":3},{"date":7,"lab":"LANGUAGE TRAINING LABORATORY","fr":1,"jlh":35,"drs":3},{"date":8,"lab":"COMPUTER BASED TRAINING (CBT) 1 & 2","fr":1,"jlh":40,"drs":3},{"date":12,"lab":"COMPUTER BASED TRAINING (CBT) 1 & 2","fr":1,"jlh":70,"drs":8},{"date":12,"lab":"LANGUAGE TRAINING LABORATORY","fr":1,"jlh":70,"drs":8},{"date":13,"lab":"COMPUTER BASED TRAINING (CBT) 1 & 2","fr":1,"jlh":69,"drs":3},{"date":13,"lab":"LANGUAGE TRAINING LABORATORY","fr":1,"jlh":69,"drs":8},{"date":14,"lab":"COMPUTER BASED TRAINING (CBT) 1 & 2","fr":1,"jlh":88,"drs":8},{"date":19,"lab":"COMPUTER BASED TRAINING (CBT) 1 & 2","fr":1,"jlh":74,"drs":7},{"date":19,"lab":"LANGUAGE TRAINING LABORATORY","fr":1,"jlh":74,"drs":7},{"date":20,"lab":"COMPUTER BASED TRAINING (CBT) 1 & 2","fr":1,"jlh":14,"drs":7},{"date":20,"lab":"LANGUAGE TRAINING LABORATORY","fr":1,"jlh":74,"drs":7},{"date":21,"lab":"COMPUTER BASED TRAINING (CBT) 1 & 2","fr":1,"jlh":74,"drs":7},{"date":21,"lab":"LANGUAGE TRAINING LABORATORY","fr":1,"jlh":74,"drs":7},{"date":22,"lab":"COMPUTER BASED TRAINING (CBT) 1 & 2","fr":1,"jlh":20,"drs":2}]
+  },
+  "Februari": {
+    "labs": ["CARGO HANDLING LABORATORY (CHL)", "ELECTRIC AND ELECTRONIC LABORATORY (EEL)", "ENGINEERING WORKSHOP", "MARINE ENGINEERING LABORATORY (MEL)", "BRIEFING ROOM", "LIQUID CARGO HANDLING SIMULATOR (LCHS)", "NAVIGATION AIDS SIMULATOR", "SHIP OPERATIONAL LABORATORY (SOL)", "COMPUTER BASED TRAINING (CBT) 1 & 2", "ENGINE ROOM CERTIFICATION SIMULATOR (ERCS)", "ENGINE ROOM GRAPHICS LABORATORY (ERGL)", "LANGUAGE TRAINING LABORATORY", "AUTOMATIC CONTROL SYSTEM LABORATORY (ACSL)"],
+    "daily": [{"date":3,"lab":"COMPUTER BASED TRAINING (CBT) 1 & 2","fr":1,"jlh":50,"drs":4},{"date":4,"lab":"COMPUTER BASED TRAINING (CBT) 1 & 2","fr":1,"jlh":40,"drs":4},{"date":6,"lab":"LIQUID CARGO HANDLING SIMULATOR (LCHS)","fr":1,"jlh":6,"drs":3},{"date":9,"lab":"COMPUTER BASED TRAINING (CBT) 1 & 2","fr":1,"jlh":90,"drs":7},{"date":9,"lab":"LANGUAGE TRAINING LABORATORY","fr":1,"jlh":90,"drs":7},{"date":10,"lab":"COMPUTER BASED TRAINING (CBT) 1 & 2","fr":1,"jlh":90,"drs":7},{"date":10,"lab":"LANGUAGE TRAINING LABORATORY","fr":1,"jlh":90,"drs":7},{"date":11,"lab":"COMPUTER BASED TRAINING (CBT) 1 & 2","fr":1,"jlh":90,"drs":7},{"date":11,"lab":"LANGUAGE TRAINING LABORATORY","fr":1,"jlh":90,"drs":7},{"date":11,"lab":"MARINE ENGINEERING LABORATORY (MEL)","fr":1,"jlh":24,"drs":3},{"date":12,"lab":"COMPUTER BASED TRAINING (CBT) 1 & 2","fr":1,"jlh":59,"drs":7},{"date":12,"lab":"LANGUAGE TRAINING LABORATORY","fr":1,"jlh":59,"drs":7},{"date":18,"lab":"COMPUTER BASED TRAINING (CBT) 1 & 2","fr":1,"jlh":17,"drs":3},{"date":18,"lab":"NAVIGATION AIDS SIMULATOR","fr":1,"jlh":24,"drs":2},{"date":19,"lab":"NAVIGATION AIDS SIMULATOR","fr":1,"jlh":17,"drs":2},{"date":20,"lab":"LIQUID CARGO HANDLING SIMULATOR (LCHS)","fr":1,"jlh":4,"drs":2},{"date":20,"lab":"NAVIGATION AIDS SIMULATOR","fr":2,"jlh":24,"drs":2},{"date":23,"lab":"COMPUTER BASED TRAINING (CBT) 1 & 2","fr":2,"jlh":89,"drs":8},{"date":23,"lab":"LANGUAGE TRAINING LABORATORY","fr":1,"jlh":45,"drs":5},{"date":24,"lab":"COMPUTER BASED TRAINING (CBT) 1 & 2","fr":1,"jlh":45,"drs":5},{"date":24,"lab":"LANGUAGE TRAINING LABORATORY","fr":1,"jlh":45,"drs":5},{"date":24,"lab":"MARINE ENGINEERING LABORATORY (MEL)","fr":1,"jlh":24,"drs":2},{"date":25,"lab":"COMPUTER BASED TRAINING (CBT) 1 & 2","fr":1,"jlh":45,"drs":5},{"date":25,"lab":"LANGUAGE TRAINING LABORATORY","fr":1,"jlh":45,"drs":5},{"date":26,"lab":"COMPUTER BASED TRAINING (CBT) 1 & 2","fr":1,"jlh":45,"drs":5},{"date":26,"lab":"LANGUAGE TRAINING LABORATORY","fr":1,"jlh":45,"drs":5},{"date":27,"lab":"LANGUAGE TRAINING LABORATORY","fr":0,"jlh":0,"drs":5},{"date":27,"lab":"MARINE ENGINEERING LABORATORY (MEL)","fr":1,"jlh":7,"drs":2}]
+  },
+  "Maret": {
+    "labs": ["CARGO HANDLING LABORATORY (CHL)", "ELECTRIC AND ELECTRONIC LABORATORY (EEL)", "ENGINEERING WORKSHOP", "MARINE ENGINEERING LABORATORY (MEL)", "BRIEFING ROOM", "LIQUID CARGO HANDLING SIMULATOR (LCHS)", "NAVIGATION AIDS SIMULATOR", "SHIP OPERATIONAL LABORATORY (SOL)", "COMPUTER BASED TRAINING (CBT) 1 & 2", "ENGINE ROOM CERTIFICATION SIMULATOR (ERCS)", "ENGINE ROOM GRAPHICS LABORATORY (ERGL)", "LANGUAGE TRAINING LABORATORY", "AUTOMATIC CONTROL SYSTEM LABORATORY (ACSL)"],
+    "daily": [{"date":3,"lab":"CARGO HANDLING LABORATORY (CHL)","fr":1,"jlh":20,"drs":2},{"date":3,"lab":"COMPUTER BASED TRAINING (CBT) 1 & 2","fr":1,"jlh":69,"drs":7},{"date":3,"lab":"LANGUAGE TRAINING LABORATORY","fr":1,"jlh":69,"drs":7},{"date":4,"lab":"CARGO HANDLING LABORATORY (CHL)","fr":2,"jlh":40,"drs":4},{"date":4,"lab":"COMPUTER BASED TRAINING (CBT) 1 & 2","fr":1,"jlh":65,"drs":7},{"date":4,"lab":"LANGUAGE TRAINING LABORATORY","fr":1,"jlh":69,"drs":7},{"date":5,"lab":"CARGO HANDLING LABORATORY (CHL)","fr":2,"jlh":45,"drs":4},{"date":5,"lab":"COMPUTER BASED TRAINING (CBT) 1 & 2","fr":1,"jlh":56,"drs":7},{"date":5,"lab":"LANGUAGE TRAINING LABORATORY","fr":1,"jlh":56,"drs":7},{"date":6,"lab":"COMPUTER BASED TRAINING (CBT) 1 & 2","fr":1,"jlh":56,"drs":6},{"date":6,"lab":"LANGUAGE TRAINING LABORATORY","fr":1,"jlh":56,"drs":7},{"date":9,"lab":"COMPUTER BASED TRAINING (CBT) 1 & 2","fr":1,"jlh":81,"drs":7},{"date":9,"lab":"LANGUAGE TRAINING LABORATORY","fr":1,"jlh":81,"drs":7},{"date":10,"lab":"COMPUTER BASED TRAINING (CBT) 1 & 2","fr":1,"jlh":81,"drs":7},{"date":10,"lab":"LANGUAGE TRAINING LABORATORY","fr":1,"jlh":81,"drs":7},{"date":11,"lab":"COMPUTER BASED TRAINING (CBT) 1 & 2","fr":1,"jlh":81,"drs":7},{"date":11,"lab":"LANGUAGE TRAINING LABORATORY","fr":1,"jlh":81,"drs":7},{"date":12,"lab":"COMPUTER BASED TRAINING (CBT) 1 & 2","fr":1,"jlh":81,"drs":7},{"date":12,"lab":"LANGUAGE TRAINING LABORATORY","fr":1,"jlh":81,"drs":7},{"date":30,"lab":"COMPUTER BASED TRAINING (CBT) 1 & 2","fr":1,"jlh":40,"drs":6},{"date":30,"lab":"LANGUAGE TRAINING LABORATORY","fr":1,"jlh":40,"drs":6},{"date":31,"lab":"COMPUTER BASED TRAINING (CBT) 1 & 2","fr":1,"jlh":40,"drs":6},{"date":31,"lab":"LANGUAGE TRAINING LABORATORY","fr":1,"jlh":40,"drs":6}]
+  },
+  "April": {
+    "labs": ["CARGO HANDLING LABORATORY (CHL)", "ELECTRIC AND ELECTRONIC LABORATORY (EEL)", "ENGINEERING WORKSHOP", "MARINE ENGINEERING LABORATORY (MEL)", "BRIEFING ROOM", "LIQUID CARGO HANDLING SIMULATOR (LCHS)", "NAVIGATION AIDS SIMULATOR", "SHIP OPERATIONAL LABORATORY (SOL)", "COMPUTER BASED TRAINING (CBT) 1 & 2", "ENGINE ROOM CERTIFICATION SIMULATOR (ERCS)", "ENGINE ROOM GRAPHICS LABORATORY (ERGL)", "LANGUAGE TRAINING LABORATORY", "AUTOMATIC CONTROL SYSTEM LABORATORY (ACSL)"],
+    "daily": [{"date":8,"lab":"LIQUID CARGO HANDLING SIMULATOR (LCHS)","fr":1,"jlh":7,"drs":2},{"date":9,"lab":"MARINE ENGINEERING LABORATORY (MEL)","fr":1,"jlh":23,"drs":2},{"date":11,"lab":"CARGO HANDLING LABORATORY (CHL)","fr":1,"jlh":21,"drs":2},{"date":13,"lab":"CARGO HANDLING LABORATORY (CHL)","fr":1,"jlh":17,"drs":2},{"date":13,"lab":"COMPUTER BASED TRAINING (CBT) 1 & 2","fr":2,"jlh":40,"drs":6},{"date":13,"lab":"NAVIGATION AIDS SIMULATOR","fr":1,"jlh":21,"drs":2},{"date":14,"lab":"CARGO HANDLING LABORATORY (CHL)","fr":1,"jlh":23,"drs":2},{"date":14,"lab":"COMPUTER BASED TRAINING (CBT) 1 & 2","fr":2,"jlh":39,"drs":6},{"date":15,"lab":"CARGO HANDLING LABORATORY (CHL)","fr":1,"jlh":22,"drs":2},{"date":15,"lab":"COMPUTER BASED TRAINING (CBT) 1 & 2","fr":3,"jlh":59,"drs":8},{"date":15,"lab":"MARINE ENGINEERING LABORATORY (MEL)","fr":1,"jlh":20,"drs":2},{"date":16,"lab":"COMPUTER BASED TRAINING (CBT) 1 & 2","fr":2,"jlh":41,"drs":6},{"date":16,"lab":"MARINE ENGINEERING LABORATORY (MEL)","fr":1,"jlh":21,"drs":2},{"date":17,"lab":"MARINE ENGINEERING LABORATORY (MEL)","fr":1,"jlh":11,"drs":2},{"date":17,"lab":"NAVIGATION AIDS SIMULATOR","fr":2,"jlh":51,"drs":3},{"date":18,"lab":"CARGO HANDLING LABORATORY (CHL)","fr":1,"jlh":22,"drs":2},{"date":20,"lab":"COMPUTER BASED TRAINING (CBT) 1 & 2","fr":2,"jlh":38,"drs":6},{"date":20,"lab":"MARINE ENGINEERING LABORATORY (MEL)","fr":2,"jlh":35,"drs":4},{"date":20,"lab":"NAVIGATION AIDS SIMULATOR","fr":2,"jlh":46,"drs":4},{"date":21,"lab":"COMPUTER BASED TRAINING (CBT) 1 & 2","fr":1,"jlh":27,"drs":3},{"date":21,"lab":"NAVIGATION AIDS SIMULATOR","fr":1,"jlh":19,"drs":2},{"date":22,"lab":"MARINE ENGINEERING LABORATORY (MEL)","fr":1,"jlh":9,"drs":2},{"date":22,"lab":"NAVIGATION AIDS SIMULATOR","fr":1,"jlh":20,"drs":2},{"date":23,"lab":"MARINE ENGINEERING LABORATORY (MEL)","fr":2,"jlh":25,"drs":4},{"date":24,"lab":"MARINE ENGINEERING LABORATORY (MEL)","fr":2,"jlh":23,"drs":4},{"date":24,"lab":"NAVIGATION AIDS SIMULATOR","fr":2,"jlh":43,"drs":4},{"date":25,"lab":"ENGINE ROOM CERTIFICATION SIMULATOR (ERCS)","fr":1,"jlh":19,"drs":2},{"date":27,"lab":"MARINE ENGINEERING LABORATORY (MEL)","fr":1,"jlh":10,"drs":2},{"date":28,"lab":"MARINE ENGINEERING LABORATORY (MEL)","fr":1,"jlh":22,"drs":2},{"date":28,"lab":"NAVIGATION AIDS SIMULATOR","fr":1,"jlh":22,"drs":2},{"date":29,"lab":"MARINE ENGINEERING LABORATORY (MEL)","fr":2,"jlh":32,"drs":4},{"date":30,"lab":"NAVIGATION AIDS SIMULATOR","fr":1,"jlh":24,"drs":2}]
+  },
+  "Mei": {
+    "labs": ["CARGO HANDLING LABORATORY (CHL)", "ELECTRIC AND ELECTRONIC LABORATORY (EEL)", "ENGINEERING WORKSHOP", "MARINE ENGINEERING LABORATORY (MEL)", "BRIEFING ROOM", "LIQUID CARGO HANDLING SIMULATOR (LCHS)", "NAVIGATION AIDS SIMULATOR", "SHIP OPERATIONAL LABORATORY (SOL)", "COMPUTER BASED TRAINING (CBT) 1 & 2", "ENGINE ROOM CERTIFICATION SIMULATOR (ERCS)", "ENGINE ROOM GRAPHICS LABORATORY (ERGL)", "LANGUAGE TRAINING LABORATORY", "AUTOMATIC CONTROL SYSTEM LABORATORY (ACSL)"],
+    "daily": [{"date":5,"lab":"COMPUTER BASED TRAINING (CBT) 1 & 2","fr":1,"jlh":45,"drs":4},{"date":5,"lab":"LANGUAGE TRAINING LABORATORY","fr":1,"jlh":45,"drs":4},{"date":6,"lab":"COMPUTER BASED TRAINING (CBT) 1 & 2","fr":1,"jlh":38,"drs":4},{"date":6,"lab":"LANGUAGE TRAINING LABORATORY","fr":1,"jlh":38,"drs":4},{"date":7,"lab":"COMPUTER BASED TRAINING (CBT) 1 & 2","fr":1,"jlh":35,"drs":3},{"date":7,"lab":"LANGUAGE TRAINING LABORATORY","fr":1,"jlh":35,"drs":3},{"date":8,"lab":"COMPUTER BASED TRAINING (CBT) 1 & 2","fr":1,"jlh":40,"drs":3},{"date":12,"lab":"COMPUTER BASED TRAINING (CBT) 1 & 2","fr":1,"jlh":70,"drs":8},{"date":12,"lab":"LANGUAGE TRAINING LABORATORY","fr":1,"jlh":70,"drs":8},{"date":13,"lab":"COMPUTER BASED TRAINING (CBT) 1 & 2","fr":1,"jlh":69,"drs":3},{"date":13,"lab":"LANGUAGE TRAINING LABORATORY","fr":1,"jlh":69,"drs":8},{"date":14,"lab":"COMPUTER BASED TRAINING (CBT) 1 & 2","fr":1,"jlh":88,"drs":8},{"date":19,"lab":"COMPUTER BASED TRAINING (CBT) 1 & 2","fr":1,"jlh":74,"drs":7},{"date":19,"lab":"LANGUAGE TRAINING LABORATORY","fr":1,"jlh":74,"drs":7},{"date":20,"lab":"COMPUTER BASED TRAINING (CBT) 1 & 2","fr":1,"jlh":14,"drs":7},{"date":20,"lab":"LANGUAGE TRAINING LABORATORY","fr":1,"jlh":74,"drs":7},{"date":21,"lab":"COMPUTER BASED TRAINING (CBT) 1 & 2","fr":1,"jlh":74,"drs":7},{"date":21,"lab":"LANGUAGE TRAINING LABORATORY","fr":1,"jlh":74,"drs":7},{"date":22,"lab":"COMPUTER BASED TRAINING (CBT) 1 & 2","fr":1,"jlh":20,"drs":2}]
+  }
+};
+
+const MONTHS = ["Januari","Februari","Maret","April","Mei"];
+let activeMonth = "Januari", activeLab = "ALL";
+let activeMetrics = { fr:true, jlh:true, drs:true };
+let mainChartObj=null, labChartObj=null, ovFRObj=null, ovJLHObj=null, ovDRSObj=null;
+const LAB_PALETTE = ['#1a4a7a','#0e7c61','#e65100','#7b2d8b','#b71c1c','#1565c0','#2e7d32','#f9a825','#4527a0','#c2185b','#00838f','#546e7a','#827717'];
+
+// ── Merged rows ───────────────────────────────────────────
+function getMergedRows(month) {
+  const dynRows = (activityCache[month] || []).map(r => ({ ...r, isStatic:false }));
+  const overrideKeys = new Set(dynRows.filter(r=>r.overridesStatic).map(r=>`${r.date}||${r.lab}`));
+  const staticRows = DATA[month].daily
+    .filter(r => !overrideKeys.has(`${r.date}||${r.lab}`))
+    .map(r => ({ ...r, kegiatan:'', pengguna:'', isStatic:true }));
+  return [...staticRows, ...dynRows];
+}
+
+function labTotals() {
+  const map = {};
+  MONTHS.forEach(m => {
+    getMergedRows(m).forEach(r => {
+      if (!map[r.lab]) map[r.lab]={fr:0,jlh:0,drs:0};
+      map[r.lab].fr+=r.fr; map[r.lab].jlh+=r.jlh; map[r.lab].drs+=r.drs;
+    });
+  });
+  return Object.entries(map).filter(([,v])=>v.fr>0||v.jlh>0||v.drs>0).map(([lab,v])=>({lab,...v}));
+}
+
+function renderMonthlyOverview() {
+  const byLab=labTotals();const bgC=byLab.map((_,i)=>LAB_PALETTE[i%LAB_PALETTE.length]);
+  document.getElementById('ovTotalFR').innerHTML  = `${byLab.reduce((s,d)=>s+d.fr,0)}<span>sesi</span>`;
+  document.getElementById('ovTotalJLH').innerHTML = `${byLab.reduce((s,d)=>s+d.jlh,0).toLocaleString()}<span>orang</span>`;
+  document.getElementById('ovTotalDRS').innerHTML = `${byLab.reduce((s,d)=>s+d.drs,0)}<span>jam</span>`;
+  const mk=(id,f,u,ref)=>{const ctx=document.getElementById(id).getContext('2d');if(ref)ref.destroy();const g=byLab.reduce((s,d)=>s+d[f],0);return new Chart(ctx,{type:'pie',data:{labels:byLab.map(d=>d.lab),datasets:[{data:byLab.map(d=>d[f]),backgroundColor:bgC,borderColor:'#fff',borderWidth:2,hoverOffset:8}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{title:c=>c[0].label,label:c=>{const p=g>0?((c.raw/g)*100).toFixed(1):0;return `  ${c.raw} ${u}  (${p}%)`;}}}}}}); };
+  ovFRObj=mk('ovFRChart','fr','sesi',ovFRObj);ovJLHObj=mk('ovJLHChart','jlh','orang',ovJLHObj);ovDRSObj=mk('ovDRSChart','drs','jam',ovDRSObj);
+  const ab=l=>l.replace('COMPUTER BASED TRAINING (CBT) 1 & 2','CBT 1&2').replace('AUTOMATIC CONTROL SYSTEM LABORATORY (ACSL)','ACS Lab').replace('LIQUID CARGO HANDLING SIMULATOR (LCHS)','LCH Sim').replace('ENGINE ROOM CERTIFICATION SIMULATOR (ERCS)','ERC Sim').replace('ENGINE ROOM GRAPHICS LABORATORY (ERGL)','ERG Lab').replace('LANGUAGE TRAINING LABORATORY','Lang. Training Lab').replace('NAVIGATION AIDS SIMULATOR','Navigation Aids Sim').replace('SHIP OPERATIONAL LABORATORY (SOL)','Ship Ops Lab').replace('MARINE ENGINEERING LABORATORY (MEL)','Marine Eng. Lab').replace('ELECTRIC AND ELECTRONIC LABORATORY (EEL)','Electric & Elec. Lab').replace('CARGO HANDLING LABORATORY (CHL)','Cargo Handling Lab').replace('ENGINEERING WORKSHOP','Engineering Workshop').replace('BRIEFING ROOM','Briefing Room');
+  document.getElementById('ovLegend').innerHTML=byLab.map((d,i)=>`<div class="ov-legend-item"><div class="ov-legend-dot" style="background:${bgC[i]}"></div><span>${ab(d.lab)}</span></div>`).join('');
+}
+
+function buildTabs() {
+  document.getElementById('monthTabs').innerHTML=MONTHS.map(m=>`<div class="month-tab${m===activeMonth?' active':''}" onclick="switchMonth('${m}')">${m} 2026</div>`).join('');
+}
+function buildLabSelect() {
+  const sel=document.getElementById('labSelect');
+  sel.innerHTML='<option value="ALL">— Semua Lab / Simulator —</option>'+
+    DATA[activeMonth].labs.map(l=>`<option value="${l}"${l===activeLab?' selected':''}>${l}</option>`).join('');
+}
+async function switchMonth(m) {
+  activeMonth=m; activeLab=document.getElementById('labSelect').value;
+  buildTabs(); buildLabSelect();
+  if (!photoCache[`_loaded_${m}`]) {
+    showLoading('Memuat foto...');
+    try {
+      const map = await apiFetch(`/api/photos?month=${encodeURIComponent(m)}`);
+      Object.assign(photoCache, map);
+      photoCache[`_loaded_${m}`]=true;
+    } catch {} finally { hideLoading(); }
+  }
+  renderAll();
+}
+function toggleMetric(m) {
+  activeMetrics[m]=!activeMetrics[m];
+  const cls={fr:'active-fr',jlh:'active-jlh',drs:'active-drs'};
+  document.getElementById('btn-'+m).className='metric-btn'+(activeMetrics[m]?' '+cls[m]:'');
+  renderAll();
+}
+function getFiltered() {
+  const lab=document.getElementById('labSelect').value;activeLab=lab;
+  const all=getMergedRows(activeMonth);return lab==='ALL'?all:all.filter(d=>d.lab===lab);
+}
+function aggByDate(rows){const m={};rows.forEach(r=>{if(!m[r.date])m[r.date]={date:r.date,fr:0,jlh:0,drs:0};m[r.date].fr+=r.fr;m[r.date].jlh+=r.jlh;m[r.date].drs+=r.drs;});return Object.values(m).sort((a,b)=>a.date-b.date);}
+function aggByLab(rows){const m={};rows.forEach(r=>{if(!m[r.lab])m[r.lab]={lab:r.lab,fr:0,jlh:0,drs:0};m[r.lab].fr+=r.fr;m[r.lab].jlh+=r.jlh;m[r.lab].drs+=r.drs;});return Object.values(m).sort((a,b)=>b.fr-a.fr);}
+
+function renderCards(rows){
+  const t=rows.reduce((a,r)=>({fr:a.fr+r.fr,jlh:a.jlh+r.jlh,drs:a.drs+r.drs}),{fr:0,jlh:0,drs:0});
+  const dates=[...new Set(rows.map(r=>r.date))];const labs=[...new Set(rows.map(r=>r.lab))];
+  document.getElementById('summaryCards').innerHTML=`
+    <div class="card"><div class="card-label">Total Frekuensi</div><div class="card-value">${t.fr}</div><div class="card-sub">sesi penggunaan</div></div>
+    <div class="card card-jlh"><div class="card-label">Total Peserta</div><div class="card-value">${t.jlh.toLocaleString()}</div><div class="card-sub">orang</div></div>
+    <div class="card card-drs"><div class="card-label">Total Durasi</div><div class="card-value">${t.drs}</div><div class="card-sub">jam penggunaan</div></div>
+    <div class="card card-days"><div class="card-label">Hari Aktif</div><div class="card-value">${dates.length}</div><div class="card-sub">${labs.length} lab/simulator aktif</div></div>`;
+}
+
+function renderMainChart(byDate){
+  const labels=byDate.map(d=>`Tgl ${d.date}`);const hasFD=activeMetrics.fr||activeMetrics.drs;const hasJ=activeMetrics.jlh;const dual=hasFD&&hasJ;
+  const ds=[];if(activeMetrics.fr)ds.push({label:'FR (Frekuensi)',data:byDate.map(d=>d.fr),backgroundColor:'rgba(26,74,122,0.85)',borderRadius:4,yAxisID:'y'});
+  if(activeMetrics.jlh)ds.push({label:'JLH (Orang)',data:byDate.map(d=>d.jlh),backgroundColor:'rgba(14,124,97,0.85)',borderRadius:4,yAxisID:dual?'y2':'y'});
+  if(activeMetrics.drs)ds.push({label:'DRS (Jam)',data:byDate.map(d=>d.drs),backgroundColor:'rgba(138,74,10,0.85)',borderRadius:4,yAxisID:'y'});
+  let yLL='';if(activeMetrics.fr&&activeMetrics.drs)yLL='Frekuensi / Durasi (jam)';else if(activeMetrics.fr)yLL='Frekuensi (sesi)';else if(activeMetrics.drs)yLL='Durasi (jam)';else if(hasJ)yLL='Jumlah Orang';
+  const lf=document.getElementById('labSelect').value;
+  document.getElementById('chartTitle').innerHTML=`Utilisasi Harian — ${activeMonth} 2026 <span>${lf==='ALL'?'Semua Lab':lf}</span>`;
+  const sc={x:{grid:{display:false},ticks:{font:{size:11}}},y:{position:'left',beginAtZero:true,display:hasFD||(!hasFD&&hasJ),title:{display:true,text:yLL,font:{size:10}},ticks:{font:{size:10}}}};
+  if(dual)sc.y2={position:'right',beginAtZero:true,title:{display:true,text:'Jumlah Orang',font:{size:10}},ticks:{font:{size:10}},grid:{drawOnChartArea:false}};
+  const ctx=document.getElementById('mainChart').getContext('2d');if(mainChartObj)mainChartObj.destroy();
+  mainChartObj=new Chart(ctx,{type:'bar',data:{labels,datasets:ds},options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},plugins:{legend:{position:'top',labels:{font:{size:11}}},tooltip:{callbacks:{label:c=>{const u=c.dataset.label.includes('Orang')?' orang':c.dataset.label.includes('Jam')?' jam':' sesi';return ` ${c.dataset.label}: ${c.raw}${u}`;
+  }}}},scales:sc}});
+}
+
+function renderLabChart(rows){
+  const byLab=aggByLab(rows);const allLabs=labTotals();const cm={};allLabs.forEach((d,i)=>{cm[d.lab]=LAB_PALETTE[i%LAB_PALETTE.length];});
+  const lc=byLab.map(d=>cm[d.lab]||'#94a3b8');
+  const ab=l=>l.replace('COMPUTER BASED TRAINING (CBT) 1 & 2','CBT 1&2').replace('AUTOMATIC CONTROL SYSTEM LABORATORY (ACSL)','ACS LAB').replace('LIQUID CARGO HANDLING SIMULATOR (LCHS)','LCH SIM').replace('ENGINE ROOM CERTIFICATION SIMULATOR (ERCS)','ERC SIM').replace('ENGINE ROOM GRAPHICS LABORATORY (ERGL)','ERG LAB').replace('LANGUAGE TRAINING LABORATORY','LANG TRG').replace('NAVIGATION AIDS SIMULATOR','NAV AIDS SIM').replace('SHIP OPERATIONAL LABORATORY (SOL)','SHIP OPS').replace('MARINE ENGINEERING LABORATORY (MEL)','MARINE ENG').replace('ELECTRIC AND ELECTRONIC LABORATORY (EEL)','EEL').replace('CARGO HANDLING LABORATORY (CHL)','CHL').replace('ENGINEERING WORKSHOP','ENG WKSP').replace('BRIEFING ROOM','BRIEF ROOM');
+  const ds=[];if(activeMetrics.fr)ds.push({label:'FR',data:byLab.map(d=>d.fr),backgroundColor:lc,borderRadius:4});
+  if(activeMetrics.jlh)ds.push({label:'JLH',data:byLab.map(d=>d.jlh),backgroundColor:lc.map(c=>c+'aa'),borderRadius:4});
+  if(activeMetrics.drs)ds.push({label:'DRS',data:byLab.map(d=>d.drs),backgroundColor:lc.map(c=>c+'77'),borderRadius:4});
+  const ctx=document.getElementById('labChart').getContext('2d');if(labChartObj)labChartObj.destroy();
+  labChartObj=new Chart(ctx,{type:'bar',data:{labels:byLab.map(d=>ab(d.lab)),datasets:ds},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'top',labels:{font:{size:11}}}},scales:{x:{grid:{display:false},ticks:{font:{size:9},maxRotation:30}},y:{beginAtZero:true,ticks:{font:{size:10}}}}}});
+}
+
+function renderTable(rows){
+  _lightboxPhotos=[];
+  document.getElementById('tableTitle').textContent=`Data Harian Detail — ${activeMonth} 2026`;
+  if(!rows.length){document.getElementById('tableBody').innerHTML=`<div class="no-data"><div class="no-data-icon">📋</div>Tidak ada data untuk filter ini.</div>`;return;}
+  const admin=isAdmin();
+  _tableRowData=[...rows].sort((a,b)=>a.date===b.date?a.lab.localeCompare(b.lab):a.date-b.date);
+  let html=`<table><thead><tr><th>Tanggal</th><th>Nama Lab / Simulator</th><th>Kegiatan</th><th>Pengguna dan Jabatan</th><th>Foto Kegiatan</th><th>FR</th><th>JLH</th><th>DRS</th>${admin?'<th>Aksi</th>':''}</tr></thead><tbody>`;
+  _tableRowData.forEach((r,idx)=>{
+    const isDyn=!r.isStatic;const isOvr=isDyn&&r.overridesStatic;
+    const badge=isDyn?(isOvr?`<span class="row-badge edit">✏️ diedit</span>`:`<span class="row-badge new">baru</span>`):'';
+    const kCell=r.kegiatan||`<span class="cell-empty">—</span>`;
+    const pCell=r.pengguna||`<span class="cell-empty">—</span>`;
+    const rowMonth=r.month||activeMonth;
+    let actionCell='';
+    if(admin){
+      const editBtn=`<button class="row-edit-btn" onclick="openEditModalByIdx(${idx})">✏️ Edit</button>`;
+      const delBtn=isDyn?`<button class="row-del-btn" onclick="removeActivity('${r._id}','${rowMonth}',event)">🗑️ Hapus</button>`:'';
+      actionCell=`<td class="action-cell">${editBtn}${delBtn}</td>`;
+    }
+    html+=`<tr class="${isDyn?'dynamic-row':''}">
+      <td><strong>${r.date} ${activeMonth.substring(0,3)}</strong>${badge}</td>
+      <td>${r.lab}</td>
+      <td class="kegiatan-cell">${kCell}</td>
+      <td class="pengguna-cell">${pCell}</td>
+      ${renderPhotoCell(activeMonth,r.lab,r.date)}
+      <td><span class="badge badge-fr">${r.fr} sesi</span></td>
+      <td><span class="badge badge-jlh">${r.jlh} orang</span></td>
+      <td><span class="badge badge-drs">${r.drs} jam</span></td>
+      ${actionCell}
+    </tr>`;
+  });
+  html+='</tbody></table>';
+  document.getElementById('tableBody').innerHTML=html;
+}
+
+function renderAll(){
+  const filtered=getFiltered();const byDate=aggByDate(filtered);
+  renderLoginBadge();renderCards(filtered);renderMonthlyOverview();
+  renderMainChart(byDate);renderLabChart(filtered);renderTable(filtered);
+  renderInputSection();
+}
+
+// ── Init ──────────────────────────────────────────────────
+(async()=>{
+  showLoading('Memuat dashboard...');
+  try {
+    // 1. Check auth
+    const me = await apiFetch('/api/auth/me').catch(()=>({role:'guest'}));
+    currentRole = me.role;
+
+    // 2. Load all dynamic activities (single request, all months)
+    const allActs = await apiFetch('/api/activities').catch(()=>[]);
+    MONTHS.forEach(m => { activityCache[m] = allActs.filter(a => a.month===m); });
+
+    // 3. Load photos for the initial active month
+    const photoMap = await apiFetch(`/api/photos?month=${encodeURIComponent(activeMonth)}`).catch(()=>({}));
+    Object.assign(photoCache, photoMap);
+    photoCache[`_loaded_${activeMonth}`] = true;
+
+    // 4. Render
+    buildTabs(); buildLabSelect(); renderAll();
+  } catch(err) {
+    console.error('Init error:', err);
+  } finally { hideLoading(); }
+
+  document.getElementById('formPhotoInput').addEventListener('change', e=>{if(e.target.files[0])processFormPhoto(e.target.files[0]);});
+  document.getElementById('editPhotoFileInput').addEventListener('change', e=>{if(e.target.files[0])processEditPhoto(e.target.files[0]);});
+  document.addEventListener('keydown', e=>{
+    if(document.getElementById('lightbox').classList.contains('active')){
+      if(e.key==='Escape')closeLightbox();if(e.key==='ArrowLeft')lbNavigate(-1);if(e.key==='ArrowRight')lbNavigate(1);return;
+    }
+    if(document.getElementById('loginModal').classList.contains('open')){if(e.key==='Escape')closeLoginModal();return;}
+    if(document.getElementById('editModal').classList.contains('open')){if(e.key==='Escape')closeEditModal();return;}
+  });
+})();
+</script>
+</body>
+</html>
