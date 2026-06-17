@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "start": "node index.js",
-    "build": "npm run build --prefix client && xcopy /E /Y /I client\\dist\\* public\\",
+    "build": "node build.js",
     "dev:server": "nodemon index.js",
     "dev:client": "npm run dev --prefix client",
     "dev": "concurrently \"npm run dev:server\" \"npm run dev:client\""
