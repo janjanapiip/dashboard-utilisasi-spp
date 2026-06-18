@@ -23,8 +23,9 @@ async function connectDB() {
     console.log('MongoDB connected');
     await seedUsers();
   } catch (err) {
-    console.error('MongoDB connection error:', err.message);
-    process.exit(1);
+    console.error('⚠️  MongoDB connection error:', err.message);
+    console.error('   → Server will keep running but API calls will fail.');
+    console.error('   → Fix: resume your Atlas cluster & whitelist your IP at cloud.mongodb.com');
   }
 }
 

@@ -1,0 +1,17 @@
+Link project:
+https://aesthetic-shortbread-ca51ba.netlify.app/
+
+Baru:
+https://dashboard-utilisasi-spp-2026.netlify.app/
+
+User:
+admin ; adminSTIP
+
+
+# 1. Copy source to deploy folder
+Copy-Item "D:\SPP\Project Dashboard SPP\Grafik Utilisasi SPP\Dashboard Utilisasi SPP 2026.html" "D:\SPP\Project Dashboard SPP\deploy\index.html" -Force
+
+# 2. Re-deploy
+& "C:\Users\fauza\AppData\Roaming\npm\netlify.cmd" deploy --prod --dir "D:\SPP\Project Dashboard SPP\deploy" --site 81965978-6bb8-45e6-9de9-5c930661033d
+
+

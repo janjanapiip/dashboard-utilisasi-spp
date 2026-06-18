@@ -1,0 +1,776 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard Utilisasi SPP 2026</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', Arial, sans-serif; background: #e6eaf3; color: #1a2332; }
+
+  .header {
+    background: linear-gradient(135deg, #0b1d38 0%, #1c3b6e 55%, #1e508a 100%);
+    color: white;
+    padding: 20px 32px 16px;
+    box-shadow: 0 3px 10px rgba(0,0,0,0.35);
+    border-bottom: 3px solid #c9a227;
+  }
+  .header-top { display: flex; align-items: center; gap: 18px; margin-bottom: 6px; }
+  .stip-logo { width: 58px; height: 58px; flex-shrink: 0; object-fit: contain; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.35)); }
+  .header h1 { font-size: 1.25rem; font-weight: 700; letter-spacing: 0.3px; }
+  .header-sub { font-size: 0.78rem; opacity: 0.82; }
+  .header-badge {
+    margin-top: 8px;
+    display: inline-block;
+    background: rgba(201,162,39,0.18);
+    border: 1px solid rgba(201,162,39,0.55);
+    padding: 3px 14px;
+    border-radius: 20px;
+    font-size: 0.72rem;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: #f0d98a;
+  }
+
+  .month-tabs {
+    background: white;
+    display: flex;
+    gap: 0;
+    border-bottom: 2px solid #dde3ec;
+    padding: 0 24px;
+    overflow-x: auto;
+  }
+  .month-tab {
+    padding: 12px 22px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: #5a6e8a;
+    border-bottom: 3px solid transparent;
+    margin-bottom: -2px;
+    white-space: nowrap;
+    transition: all 0.18s;
+  }
+  .month-tab:hover { color: #1c3b6e; background: #f0f4fb; }
+  .month-tab.active { color: #1c3b6e; border-bottom-color: #c9a227; font-weight: 700; }
+
+  .controls {
+    background: white;
+    padding: 14px 24px;
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+    align-items: center;
+    border-bottom: 1px solid #e2e8f0;
+  }
+  .control-group { display: flex; align-items: center; gap: 8px; }
+  .control-group label { font-size: 0.82rem; font-weight: 600; color: #4a5568; }
+  select {
+    padding: 7px 12px;
+    border: 1px solid #cbd5e0;
+    border-radius: 6px;
+    font-size: 0.83rem;
+    color: #2d3748;
+    background: #f8fafc;
+    cursor: pointer;
+    min-width: 220px;
+  }
+  select:focus { outline: none; border-color: #c9a227; box-shadow: 0 0 0 2px rgba(201,162,39,0.18); }
+
+  .metric-btns { display: flex; gap: 4px; }
+  .metric-btn {
+    padding: 7px 14px;
+    border: 1px solid #cbd5e0;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+    background: #f8fafc;
+    color: #4a5568;
+  }
+  .metric-btn.active-fr   { background: #1c3b6e; color: white; border-color: #1c3b6e; }
+  .metric-btn.active-jlh  { background: #0e7c61; color: white; border-color: #0e7c61; }
+  .metric-btn.active-drs  { background: #7a4600; color: white; border-color: #7a4600; }
+
+  .summary-cards {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 14px;
+    padding: 20px 24px 6px;
+  }
+  .card {
+    background: white;
+    border-radius: 10px;
+    padding: 16px 20px;
+    box-shadow: 0 1px 5px rgba(0,0,0,0.09);
+    border-left: 4px solid #1c3b6e;
+  }
+  .card.card-jlh { border-left-color: #0e7c61; }
+  .card.card-drs { border-left-color: #7a4600; }
+  .card.card-days { border-left-color: #c9a227; }
+  .card-label { font-size: 0.72rem; font-weight: 600; color: #718096; text-transform: uppercase; letter-spacing: 0.5px; }
+  .card-value { font-size: 1.8rem; font-weight: 800; color: #1a2332; margin: 4px 0 2px; }
+  .card-sub { font-size: 0.72rem; color: #a0aec0; }
+
+  .main-content {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 14px;
+    padding: 14px 24px 24px;
+  }
+
+  .chart-panel {
+    background: white;
+    border-radius: 10px;
+    padding: 20px;
+    box-shadow: 0 1px 5px rgba(0,0,0,0.09);
+    border-top: 3px solid #c9a227;
+  }
+  .chart-title {
+    font-size: 0.92rem;
+    font-weight: 700;
+    color: #2d3748;
+    margin-bottom: 14px;
+  }
+  .chart-title span {
+    font-size: 0.78rem;
+    font-weight: 400;
+    color: #718096;
+    margin-left: 8px;
+  }
+  .chart-wrap { position: relative; height: 280px; }
+
+  .table-panel {
+    background: white;
+    border-radius: 10px;
+    padding: 20px;
+    box-shadow: 0 1px 5px rgba(0,0,0,0.09);
+    overflow-x: auto;
+    border-top: 3px solid #c9a227;
+  }
+  .table-title { font-size: 0.92rem; font-weight: 700; color: #2d3748; margin-bottom: 14px; }
+  table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
+  th {
+    background: #eef2fa;
+    padding: 9px 12px;
+    text-align: left;
+    font-weight: 700;
+    color: #1c3b6e;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    border-bottom: 2px solid #c9a227;
+  }
+  td { padding: 8px 12px; border-bottom: 1px solid #edf2f7; color: #2d3748; }
+  tr:hover td { background: #f8fafc; }
+  .badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 0.72rem;
+    font-weight: 700;
+  }
+  .badge-fr  { background: #dce8f7; color: #1c3b6e; }
+  .badge-jlh { background: #d1fae5; color: #065f46; }
+  .badge-drs { background: #fef3c7; color: #78350f; }
+
+  .no-data {
+    text-align: center;
+    padding: 48px 24px;
+    color: #a0aec0;
+    font-size: 0.9rem;
+  }
+  .no-data-icon { font-size: 2.5rem; margin-bottom: 8px; }
+
+  /* ── Overview section ─────────────────────────────── */
+  .overview-section {
+    margin: 18px 24px 0;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.07);
+    overflow: hidden;
+  }
+  .overview-header {
+    background: linear-gradient(90deg, #0b1d38 0%, #1c3b6e 100%);
+    color: white;
+    padding: 14px 22px;
+    border-bottom: 2px solid #c9a227;
+  }
+  .overview-title { font-size: 0.95rem; font-weight: 700; }
+  .overview-sub { font-size: 0.75rem; opacity: 0.75; margin-top: 2px; }
+  .overview-charts {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0;
+    border-bottom: 1px solid #edf2f7;
+  }
+  .overview-card {
+    padding: 14px 18px 18px;
+    border-right: 1px solid #edf2f7;
+  }
+  .overview-card:last-child { border-right: none; }
+  .ov-label {
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: #4a5568;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    margin-bottom: 6px;
+    text-align: center;
+  }
+  .ov-total {
+    text-align: center;
+    font-size: 1.3rem;
+    font-weight: 800;
+    color: #1a2332;
+    margin-bottom: 10px;
+    line-height: 1;
+  }
+  .ov-total span { font-size: 0.72rem; font-weight: 500; color: #718096; margin-left: 4px; }
+  .ov-chart-wrap { position: relative; height: 200px; }
+  /* ── Shared legend ─────────────────────────────────── */
+  .ov-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 7px 18px;
+    padding: 14px 22px 18px;
+    background: #f8fafc;
+  }
+  .ov-legend-item {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 0.75rem;
+    color: #2d3748;
+    cursor: default;
+  }
+  .ov-legend-dot {
+    width: 13px;
+    height: 13px;
+    border-radius: 3px;
+    flex-shrink: 0;
+  }
+
+  @media (max-width: 768px) {
+    .summary-cards { grid-template-columns: repeat(2, 1fr); }
+    .header h1 { font-size: 1rem; }
+    .controls { padding: 12px 16px; }
+    .main-content { padding: 12px 16px 20px; }
+    .summary-cards { padding: 14px 16px 4px; }
+    .month-tabs { padding: 0 12px; }
+    .overview-section { margin: 14px 16px 0; }
+    .overview-charts { grid-template-columns: 1fr; }
+    .overview-card { border-right: none; border-bottom: 1px solid #edf2f7; }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-top">
+    <img src="https://stipindonesia.ac.id/images/logo-stip.png" class="stip-logo" alt="Logo STIP" onerror="this.style.display='none'">
+    <div>
+      <div class="header-sub">KEMENTERIAN PERHUBUNGAN — BADAN PENGEMBANGAN SDM PERHUBUNGAN</div>
+      <h1>SEKOLAH TINGGI ILMU PELAYARAN — UNIT SARANA PRAKTEK PELAUT (SPP)</h1>
+    </div>
+  </div>
+  <div class="header-badge">Dashboard Utilisasi Sarana Praktek Pelaut 2026</div>
+</div>
+
+<div class="month-tabs" id="monthTabs"></div>
+
+<div class="controls">
+  <div class="control-group">
+    <label>Nama Lab / Simulator:</label>
+    <select id="labSelect" onchange="renderAll()">
+      <option value="ALL">— Semua Lab / Simulator —</option>
+    </select>
+  </div>
+  <div class="control-group">
+    <label>Metrik Tampilan:</label>
+    <div class="metric-btns">
+      <button class="metric-btn active-fr" id="btn-fr"  onclick="toggleMetric('fr')">FR (Frekuensi)</button>
+      <button class="metric-btn active-jlh" id="btn-jlh" onclick="toggleMetric('jlh')">JLH (Orang)</button>
+      <button class="metric-btn active-drs" id="btn-drs" onclick="toggleMetric('drs')">DRS (Durasi)</button>
+    </div>
+  </div>
+</div>
+
+<div class="summary-cards" id="summaryCards"></div>
+
+<!-- ── OVERVIEW PIE SECTION ───────────────────────────── -->
+<div class="overview-section">
+  <div class="overview-header">
+    <div class="overview-title">Rekapitulasi Utilisasi Bulanan 2026</div>
+    <div class="overview-sub">Proporsi penggunaan per Lab / Simulator — seluruh bulan (Jan – Mei)</div>
+  </div>
+  <div class="overview-charts">
+    <div class="overview-card">
+      <div class="ov-label">Frekuensi Penggunaan (FR)</div>
+      <div class="ov-total" id="ovTotalFR">—</div>
+      <div class="ov-chart-wrap"><canvas id="ovFRChart"></canvas></div>
+    </div>
+    <div class="overview-card">
+      <div class="ov-label">Jumlah Peserta (JLH)</div>
+      <div class="ov-total" id="ovTotalJLH">—</div>
+      <div class="ov-chart-wrap"><canvas id="ovJLHChart"></canvas></div>
+    </div>
+    <div class="overview-card">
+      <div class="ov-label">Total Durasi / Jam (DRS)</div>
+      <div class="ov-total" id="ovTotalDRS">—</div>
+      <div class="ov-chart-wrap"><canvas id="ovDRSChart"></canvas></div>
+    </div>
+  </div>
+  <div class="ov-legend" id="ovLegend"></div>
+</div>
+
+<div class="main-content">
+  <div class="chart-panel">
+    <div class="chart-title">Utilisasi per Lab / Simulator <span>bulan ini</span></div>
+    <div class="chart-wrap"><canvas id="labChart"></canvas></div>
+  </div>
+  <div class="chart-panel">
+    <div class="chart-title" id="chartTitle">Utilisasi Harian</div>
+    <div class="chart-wrap"><canvas id="mainChart"></canvas></div>
+  </div>
+  <div class="table-panel">
+    <div class="table-title" id="tableTitle">Data Harian Detail</div>
+    <div id="tableBody"></div>
+  </div>
+</div>
+
+<script>
+const DATA = {
+  "Januari": {
+    "labs": ["CARGO HANDLING LABORATORY (CHL)", "ELECTRIC AND ELECTRONIC LABORATORY (EEL)", "ENGINEERING WORKSHOP", "MARINE ENGINEERING LABORATORY (MEL)", "BRIEFING ROOM", "LIQUID CARGO HANDLING SIMULATOR (LCHS)", "NAVIGATION AIDS SIMULATOR", "SHIP OPERATIONAL LABORATORY (SOL)", "COMPUTER BASED TRAINING (CBT) 1 & 2", "ENGINE ROOM CERTIFICATION SIMULATOR (ERCS)", "ENGINE ROOM GRAPHICS LABORATORY (ERGL)", "LANGUAGE TRAINING LABORATORY", "AUTOMATIC CONTROL SYSTEM LABORATORY (ACSL)"],
+    "daily": [{"date": 5, "lab": "COMPUTER BASED TRAINING (CBT) 1 & 2", "fr": 1, "jlh": 45, "drs": 4}, {"date": 5, "lab": "LANGUAGE TRAINING LABORATORY", "fr": 1, "jlh": 45, "drs": 4}, {"date": 6, "lab": "COMPUTER BASED TRAINING (CBT) 1 & 2", "fr": 1, "jlh": 38, "drs": 4}, {"date": 6, "lab": "LANGUAGE TRAINING LABORATORY", "fr": 1, "jlh": 38, "drs": 4}, {"date": 7, "lab": "COMPUTER BASED TRAINING (CBT) 1 & 2", "fr": 1, "jlh": 35, "drs": 3}, {"date": 7, "lab": "LANGUAGE TRAINING LABORATORY", "fr": 1, "jlh": 35, "drs": 3}, {"date": 8, "lab": "COMPUTER BASED TRAINING (CBT) 1 & 2", "fr": 1, "jlh": 40, "drs": 3}, {"date": 12, "lab": "COMPUTER BASED TRAINING (CBT) 1 & 2", "fr": 1, "jlh": 70, "drs": 8}, {"date": 12, "lab": "LANGUAGE TRAINING LABORATORY", "fr": 1, "jlh": 70, "drs": 8}, {"date": 13, "lab": "COMPUTER BASED TRAINING (CBT) 1 & 2", "fr": 1, "jlh": 69, "drs": 3}, {"date": 13, "lab": "LANGUAGE TRAINING LABORATORY", "fr": 1, "jlh": 69, "drs": 8}, {"date": 14, "lab": "COMPUTER BASED TRAINING (CBT) 1 & 2", "fr": 1, "jlh": 88, "drs": 8}, {"date": 19, "lab": "COMPUTER BASED TRAINING (CBT) 1 & 2", "fr": 1, "jlh": 74, "drs": 7}, {"date": 19, "lab": "LANGUAGE TRAINING LABORATORY", "fr": 1, "jlh": 74, "drs": 7}, {"date": 20, "lab": "COMPUTER BASED TRAINING (CBT) 1 & 2", "fr": 1, "jlh": 14, "drs": 7}, {"date": 20, "lab": "LANGUAGE TRAINING LABORATORY", "fr": 1, "jlh": 74, "drs": 7}, {"date": 21, "lab": "COMPUTER BASED TRAINING (CBT) 1 & 2", "fr": 1, "jlh": 74, "drs": 7}, {"date": 21, "lab": "LANGUAGE TRAINING LABORATORY", "fr": 1, "jlh": 74, "drs": 7}, {"date": 22, "lab": "COMPUTER BASED TRAINING (CBT) 1 & 2", "fr": 1, "jlh": 20, "drs": 2}]
+  },
+  "Februari": {
+    "labs": ["CARGO HANDLING LABORATORY (CHL)", "ELECTRIC AND ELECTRONIC LABORATORY (EEL)", "ENGINEERING WORKSHOP", "MARINE ENGINEERING LABORATORY (MEL)", "BRIEFING ROOM", "LIQUID CARGO HANDLING SIMULATOR (LCHS)", "NAVIGATION AIDS SIMULATOR", "SHIP OPERATIONAL LABORATORY (SOL)", "COMPUTER BASED TRAINING (CBT) 1 & 2", "ENGINE ROOM CERTIFICATION SIMULATOR (ERCS)", "ENGINE ROOM GRAPHICS LABORATORY (ERGL)", "LANGUAGE TRAINING LABORATORY", "AUTOMATIC CONTROL SYSTEM LABORATORY (ACSL)"],
+    "daily": [{"date": 3, "lab": "COMPUTER BASED TRAINING (CBT) 1 & 2", "fr": 1, "jlh": 50, "drs": 4}, {"date": 4, "lab": "COMPUTER BASED TRAINING (CBT) 1 & 2", "fr": 1, "jlh": 40, "drs": 4}, {"date": 6, "lab": "LIQUID CARGO HANDLING SIMULATOR (LCHS)", "fr": 1, "jlh": 6, "drs": 3}, {"date": 9, "lab": "COMPUTER BASED TRAINING (CBT) 1 & 2", "fr": 1, "jlh": 90, "drs": 7}, {"date": 9, "lab": "LANGUAGE TRAINING LABORATORY", "fr": 1, "jlh": 90, "drs": 7}, {"date": 10, "lab": "COMPUTER BASED TRAINING (CBT) 1 & 2", "fr": 1, "jlh": 90, "drs": 7}, {"date": 10, "lab": "LANGUAGE TRAINING LABORATORY", "fr": 1, "jlh": 90, "drs": 7}, {"date": 11, "lab": "COMPUTER BASED TRAINING (CBT) 1 & 2", "fr": 1, "jlh": 90, "drs": 7}, {"date": 11, "lab": "LANGUAGE TRAINING LABORATORY", "fr": 1, "jlh": 90, "drs": 7}, {"date": 11, "lab": "MARINE ENGINEERING LABORATORY (MEL)", "fr": 1, "jlh": 24, "drs": 3}, {"date": 12, "lab": "COMPUTER BASED TRAINING (CBT) 1 & 2", "fr": 1, "jlh": 59, "drs": 7}, {"date": 12, "lab": "LANGUAGE TRAINING LABORATORY", "fr": 1, "jlh": 59, "drs": 7}, {"date": 18, "lab": "COMPUTER BASED TRAINING (CBT) 1 & 2", "fr": 1, "jlh": 17, "drs": 3}, {"date": 18, "lab": "NAVIGATION AIDS SIMULATOR", "fr": 1, "jlh": 24, "drs": 2}, {"date": 19, "lab": "NAVIGATION AIDS SIMULATOR", "fr": 1, "jlh": 17, "drs": 2}, {"date": 20, "lab": "LIQUID CARGO HANDLING SIMULATOR (LCHS)", "fr": 1, "jlh": 4, "drs": 2}, {"date": 20, "lab": "NAVIGATION AIDS SIMULATOR", "fr": 2, "jlh": 24, "drs": 2}, {"date": 23, "lab": "COMPUTER BASED TRAINING (CBT) 1 & 2", "fr": 2, "jlh": 89, "drs": 8}, {"date": 23, "lab": "LANGUAGE TRAINING LABORATORY", "fr": 1, "jlh": 45, "drs": 5}, {"date": 24, "lab": "COMPUTER BASED TRAINING (CBT) 1 & 2", "fr": 1, "jlh": 45, "drs": 5}, {"date": 24, "lab": "LANGUAGE TRAINING LABORATORY", "fr": 1, "jlh": 45, "drs": 5}, {"date": 24, "lab": "MARINE ENGINEERING LABORATORY (MEL)", "fr": 1, "jlh": 24, "drs": 2}, {"date": 25, "lab": "COMPUTER BASED TRAINING (CBT) 1 & 2", "fr": 1, "jlh": 45, "drs": 5}, {"date": 25, "lab": "LANGUAGE TRAINING LABORATORY", "fr": 1, "jlh": 45, "drs": 5}, {"date": 26, "lab": "COMPUTER BASED TRAINING (CBT) 1 & 2", "fr": 1, "jlh": 45, "drs": 5}, {"date": 26, "lab": "LANGUAGE TRAINING LABORATORY", "fr": 1, "jlh": 45, "drs": 5}, {"date": 27, "lab": "LANGUAGE TRAINING LABORATORY", "fr": 0, "jlh": 0, "drs": 5}, {"date": 27, "lab": "MARINE ENGINEERING LABORATORY (MEL)", "fr": 1, "jlh": 7, "drs": 2}]
+  },
+  "Maret": {
+    "labs": ["CARGO HANDLING LABORATORY (CHL)", "ELECTRIC AND ELECTRONIC LABORATORY (EEL)", "ENGINEERING WORKSHOP", "MARINE ENGINEERING LABORATORY (MEL)", "BRIEFING ROOM", "LIQUID CARGO HANDLING SIMULATOR (LCHS)", "NAVIGATION AIDS SIMULATOR", "SHIP OPERATIONAL LABORATORY (SOL)", "COMPUTER BASED TRAINING (CBT) 1 & 2", "ENGINE ROOM CERTIFICATION SIMULATOR (ERCS)", "ENGINE ROOM GRAPHICS LABORATORY (ERGL)", "LANGUAGE TRAINING LABORATORY", "AUTOMATIC CONTROL SYSTEM LABORATORY (ACSL)"],
+    "daily": [{"date": 3, "lab": "CARGO HANDLING LABORATORY (CHL)", "fr": 1, "jlh": 20, "drs": 2}, {"date": 3, "lab": "COMPUTER BASED TRAINING (CBT) 1 & 2", "fr": 1, "jlh": 69, "drs": 7}, {"date": 3, "lab": "LANGUAGE TRAINING LABORATORY", "fr": 1, "jlh": 69, "drs": 7}, {"date": 4, "lab": "CARGO HANDLING LABORATORY (CHL)", "fr": 2, "jlh": 40, "drs": 4}, {"date": 4, "lab": "COMPUTER BASED TRAINING (CBT) 1 & 2", "fr": 1, "jlh": 65, "drs": 7}, {"date": 4, "lab": "LANGUAGE TRAINING LABORATORY", "fr": 1, "jlh": 69, "drs": 7}, {"date": 5, "lab": "CARGO HANDLING LABORATORY (CHL)", "fr": 2, "jlh": 45, "drs": 4}, {"date": 5, "lab": "COMPUTER BASED TRAINING (CBT) 1 & 2", "fr": 1, "jlh": 56, "drs": 7}, {"date": 5, "lab": "LANGUAGE TRAINING LABORATORY", "fr": 1, "jlh": 56, "drs": 7}, {"date": 6, "lab": "COMPUTER BASED TRAINING (CBT) 1 & 2", "fr": 1, "jlh": 56, "drs": 6}, {"date": 6, "lab": "LANGUAGE TRAINING LABORATORY", "fr": 1, "jlh": 56, "drs": 7}, {"date": 9, "lab": "COMPUTER BASED TRAINING (CBT) 1 & 2", "fr": 1, "jlh": 81, "drs": 7}, {"date": 9, "lab": "LANGUAGE TRAINING LABORATORY", "fr": 1, "jlh": 81, "drs": 7}, {"date": 10, "lab": "COMPUTER BASED TRAINING (CBT) 1 & 2", "fr": 1, "jlh": 81, "drs": 7}, {"date": 10, "lab": "LANGUAGE TRAINING LABORATORY", "fr": 1, "jlh": 81, "drs": 7}, {"date": 11, "lab": "COMPUTER BASED TRAINING (CBT) 1 & 2", "fr": 1, "jlh": 81, "drs": 7}, {"date": 11, "lab": "LANGUAGE TRAINING LABORATORY", "fr": 1, "jlh": 81, "drs": 7}, {"date": 12, "lab": "COMPUTER BASED TRAINING (CBT) 1 & 2", "fr": 1, "jlh": 81, "drs": 7}, {"date": 12, "lab": "LANGUAGE TRAINING LABORATORY", "fr": 1, "jlh": 81, "drs": 7}, {"date": 30, "lab": "COMPUTER BASED TRAINING (CBT) 1 & 2", "fr": 1, "jlh": 40, "drs": 6}, {"date": 30, "lab": "LANGUAGE TRAINING LABORATORY", "fr": 1, "jlh": 40, "drs": 6}, {"date": 31, "lab": "COMPUTER BASED TRAINING (CBT) 1 & 2", "fr": 1, "jlh": 40, "drs": 6}, {"date": 31, "lab": "LANGUAGE TRAINING LABORATORY", "fr": 1, "jlh": 40, "drs": 6}]
+  },
+  "April": {
+    "labs": ["CARGO HANDLING LABORATORY (CHL)", "ELECTRIC AND ELECTRONIC LABORATORY (EEL)", "ENGINEERING WORKSHOP", "MARINE ENGINEERING LABORATORY (MEL)", "BRIEFING ROOM", "LIQUID CARGO HANDLING SIMULATOR (LCHS)", "NAVIGATION AIDS SIMULATOR", "SHIP OPERATIONAL LABORATORY (SOL)", "COMPUTER BASED TRAINING (CBT) 1 & 2", "ENGINE ROOM CERTIFICATION SIMULATOR (ERCS)", "ENGINE ROOM GRAPHICS LABORATORY (ERGL)", "LANGUAGE TRAINING LABORATORY", "AUTOMATIC CONTROL SYSTEM LABORATORY (ACSL)"],
+    "daily": [{"date": 8, "lab": "LIQUID CARGO HANDLING SIMULATOR (LCHS)", "fr": 1, "jlh": 7, "drs": 2}, {"date": 9, "lab": "MARINE ENGINEERING LABORATORY (MEL)", "fr": 1, "jlh": 23, "drs": 2}, {"date": 11, "lab": "CARGO HANDLING LABORATORY (CHL)", "fr": 1, "jlh": 21, "drs": 2}, {"date": 13, "lab": "CARGO HANDLING LABORATORY (CHL)", "fr": 1, "jlh": 17, "drs": 2}, {"date": 13, "lab": "COMPUTER BASED TRAINING (CBT) 1 & 2", "fr": 2, "jlh": 40, "drs": 6}, {"date": 13, "lab": "NAVIGATION AIDS SIMULATOR", "fr": 1, "jlh": 21, "drs": 2}, {"date": 14, "lab": "CARGO HANDLING LABORATORY (CHL)", "fr": 1, "jlh": 23, "drs": 2}, {"date": 14, "lab": "COMPUTER BASED TRAINING (CBT) 1 & 2", "fr": 2, "jlh": 39, "drs": 6}, {"date": 15, "lab": "CARGO HANDLING LABORATORY (CHL)", "fr": 1, "jlh": 22, "drs": 2}, {"date": 15, "lab": "COMPUTER BASED TRAINING (CBT) 1 & 2", "fr": 3, "jlh": 59, "drs": 8}, {"date": 15, "lab": "MARINE ENGINEERING LABORATORY (MEL)", "fr": 1, "jlh": 20, "drs": 2}, {"date": 16, "lab": "COMPUTER BASED TRAINING (CBT) 1 & 2", "fr": 2, "jlh": 41, "drs": 6}, {"date": 16, "lab": "MARINE ENGINEERING LABORATORY (MEL)", "fr": 1, "jlh": 21, "drs": 2}, {"date": 17, "lab": "MARINE ENGINEERING LABORATORY (MEL)", "fr": 1, "jlh": 11, "drs": 2}, {"date": 17, "lab": "NAVIGATION AIDS SIMULATOR", "fr": 2, "jlh": 51, "drs": 3}, {"date": 18, "lab": "CARGO HANDLING LABORATORY (CHL)", "fr": 1, "jlh": 22, "drs": 2}, {"date": 20, "lab": "COMPUTER BASED TRAINING (CBT) 1 & 2", "fr": 2, "jlh": 38, "drs": 6}, {"date": 20, "lab": "MARINE ENGINEERING LABORATORY (MEL)", "fr": 2, "jlh": 35, "drs": 4}, {"date": 20, "lab": "NAVIGATION AIDS SIMULATOR", "fr": 2, "jlh": 46, "drs": 4}, {"date": 21, "lab": "COMPUTER BASED TRAINING (CBT) 1 & 2", "fr": 1, "jlh": 27, "drs": 3}, {"date": 21, "lab": "NAVIGATION AIDS SIMULATOR", "fr": 1, "jlh": 19, "drs": 2}, {"date": 22, "lab": "MARINE ENGINEERING LABORATORY (MEL)", "fr": 1, "jlh": 9, "drs": 2}, {"date": 22, "lab": "NAVIGATION AIDS SIMULATOR", "fr": 1, "jlh": 20, "drs": 2}, {"date": 23, "lab": "MARINE ENGINEERING LABORATORY (MEL)", "fr": 2, "jlh": 25, "drs": 4}, {"date": 24, "lab": "MARINE ENGINEERING LABORATORY (MEL)", "fr": 2, "jlh": 23, "drs": 4}, {"date": 24, "lab": "NAVIGATION AIDS SIMULATOR", "fr": 2, "jlh": 43, "drs": 4}, {"date": 25, "lab": "ENGINE ROOM CERTIFICATION SIMULATOR (ERCS)", "fr": 1, "jlh": 19, "drs": 2}, {"date": 27, "lab": "MARINE ENGINEERING LABORATORY (MEL)", "fr": 1, "jlh": 10, "drs": 2}, {"date": 28, "lab": "MARINE ENGINEERING LABORATORY (MEL)", "fr": 1, "jlh": 22, "drs": 2}, {"date": 28, "lab": "NAVIGATION AIDS SIMULATOR", "fr": 1, "jlh": 22, "drs": 2}, {"date": 29, "lab": "MARINE ENGINEERING LABORATORY (MEL)", "fr": 2, "jlh": 32, "drs": 4}, {"date": 30, "lab": "NAVIGATION AIDS SIMULATOR", "fr": 1, "jlh": 24, "drs": 2}]
+  },
+  "Mei": {
+    "labs": ["CARGO HANDLING LABORATORY (CHL)", "ELECTRIC AND ELECTRONIC LABORATORY (EEL)", "ENGINEERING WORKSHOP", "MARINE ENGINEERING LABORATORY (MEL)", "BRIEFING ROOM", "LIQUID CARGO HANDLING SIMULATOR (LCHS)", "NAVIGATION AIDS SIMULATOR", "SHIP OPERATIONAL LABORATORY (SOL)", "COMPUTER BASED TRAINING (CBT) 1 & 2", "ENGINE ROOM CERTIFICATION SIMULATOR (ERCS)", "ENGINE ROOM GRAPHICS LABORATORY (ERGL)", "LANGUAGE TRAINING LABORATORY", "AUTOMATIC CONTROL SYSTEM LABORATORY (ACSL)"],
+    "daily": [{"date": 5, "lab": "COMPUTER BASED TRAINING (CBT) 1 & 2", "fr": 1, "jlh": 45, "drs": 4}, {"date": 5, "lab": "LANGUAGE TRAINING LABORATORY", "fr": 1, "jlh": 45, "drs": 4}, {"date": 6, "lab": "COMPUTER BASED TRAINING (CBT) 1 & 2", "fr": 1, "jlh": 38, "drs": 4}, {"date": 6, "lab": "LANGUAGE TRAINING LABORATORY", "fr": 1, "jlh": 38, "drs": 4}, {"date": 7, "lab": "COMPUTER BASED TRAINING (CBT) 1 & 2", "fr": 1, "jlh": 35, "drs": 3}, {"date": 7, "lab": "LANGUAGE TRAINING LABORATORY", "fr": 1, "jlh": 35, "drs": 3}, {"date": 8, "lab": "COMPUTER BASED TRAINING (CBT) 1 & 2", "fr": 1, "jlh": 40, "drs": 3}, {"date": 12, "lab": "COMPUTER BASED TRAINING (CBT) 1 & 2", "fr": 1, "jlh": 70, "drs": 8}, {"date": 12, "lab": "LANGUAGE TRAINING LABORATORY", "fr": 1, "jlh": 70, "drs": 8}, {"date": 13, "lab": "COMPUTER BASED TRAINING (CBT) 1 & 2", "fr": 1, "jlh": 69, "drs": 3}, {"date": 13, "lab": "LANGUAGE TRAINING LABORATORY", "fr": 1, "jlh": 69, "drs": 8}, {"date": 14, "lab": "COMPUTER BASED TRAINING (CBT) 1 & 2", "fr": 1, "jlh": 88, "drs": 8}, {"date": 19, "lab": "COMPUTER BASED TRAINING (CBT) 1 & 2", "fr": 1, "jlh": 74, "drs": 7}, {"date": 19, "lab": "LANGUAGE TRAINING LABORATORY", "fr": 1, "jlh": 74, "drs": 7}, {"date": 20, "lab": "COMPUTER BASED TRAINING (CBT) 1 & 2", "fr": 1, "jlh": 14, "drs": 7}, {"date": 20, "lab": "LANGUAGE TRAINING LABORATORY", "fr": 1, "jlh": 74, "drs": 7}, {"date": 21, "lab": "COMPUTER BASED TRAINING (CBT) 1 & 2", "fr": 1, "jlh": 74, "drs": 7}, {"date": 21, "lab": "LANGUAGE TRAINING LABORATORY", "fr": 1, "jlh": 74, "drs": 7}, {"date": 22, "lab": "COMPUTER BASED TRAINING (CBT) 1 & 2", "fr": 1, "jlh": 20, "drs": 2}]
+  }
+};
+
+const MONTHS = ["Januari","Februari","Maret","April","Mei"];
+
+
+let activeMonth = "Januari";
+let activeLab = "ALL";
+let activeMetrics = { fr: true, jlh: true, drs: true };
+let mainChartObj = null;
+let labChartObj = null;
+let ovFRObj = null, ovJLHObj = null, ovDRSObj = null;
+
+// ── Lab colour palette (13 distinct colours) ─────────────
+const LAB_PALETTE = [
+  '#1a4a7a','#0e7c61','#e65100','#7b2d8b','#b71c1c',
+  '#1565c0','#2e7d32','#f9a825','#4527a0','#c2185b',
+  '#00838f','#546e7a','#827717'
+];
+
+// ── Aggregate usage per lab across ALL months ─────────────
+function labTotals() {
+  const map = {};
+  MONTHS.forEach(m => {
+    DATA[m].daily.forEach(r => {
+      if (!map[r.lab]) map[r.lab] = {fr:0, jlh:0, drs:0};
+      map[r.lab].fr  += r.fr;
+      map[r.lab].jlh += r.jlh;
+      map[r.lab].drs += r.drs;
+    });
+  });
+  // Return only labs that have at least some activity
+  return Object.entries(map)
+    .filter(([, v]) => v.fr > 0 || v.jlh > 0 || v.drs > 0)
+    .map(([lab, v]) => ({lab, ...v}));
+}
+
+// ── Overview — pie charts per metric, shared legend ───────
+function renderMonthlyOverview() {
+  const byLab = labTotals();
+  const labels = byLab.map(d => d.lab);
+  const bgColors = byLab.map((_, i) => LAB_PALETTE[i % LAB_PALETTE.length]);
+
+  // Update grand-total badges
+  const totFR  = byLab.reduce((s,d) => s+d.fr, 0);
+  const totJLH = byLab.reduce((s,d) => s+d.jlh, 0);
+  const totDRS = byLab.reduce((s,d) => s+d.drs, 0);
+  document.getElementById('ovTotalFR').innerHTML  = `${totFR}<span>sesi</span>`;
+  document.getElementById('ovTotalJLH').innerHTML = `${totJLH.toLocaleString()}<span>orang</span>`;
+  document.getElementById('ovTotalDRS').innerHTML = `${totDRS}<span>jam</span>`;
+
+  const makePie = (id, field, unit, ref) => {
+    const ctx = document.getElementById(id).getContext('2d');
+    if (ref) ref.destroy();
+    const grandTotal = byLab.reduce((s,d) => s+d[field], 0);
+    return new Chart(ctx, {
+      type: 'pie',
+      data: {
+        labels,
+        datasets: [{
+          data: byLab.map(d => d[field]),
+          backgroundColor: bgColors,
+          borderColor: '#ffffff',
+          borderWidth: 2,
+          hoverOffset: 8
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              title: ctx => ctx[0].label,
+              label: ctx => {
+                const pct = grandTotal > 0 ? ((ctx.raw / grandTotal) * 100).toFixed(1) : 0;
+                return `  ${ctx.raw} ${unit}  (${pct}%)`;
+              }
+            }
+          }
+        }
+      }
+    });
+  };
+
+  ovFRObj  = makePie('ovFRChart',  'fr',  'sesi',  ovFRObj);
+  ovJLHObj = makePie('ovJLHChart', 'jlh', 'orang', ovJLHObj);
+  ovDRSObj = makePie('ovDRSChart', 'drs', 'jam',   ovDRSObj);
+
+  // Build shared colour legend (one entry per active lab)
+  const legendEl = document.getElementById('ovLegend');
+  legendEl.innerHTML = byLab.map((d, i) => {
+    // Shorten lab name for legend readability
+    const short = d.lab
+      .replace('COMPUTER BASED TRAINING (CBT) 1 & 2','CBT 1&2')
+      .replace('ENGINEERING WORKSHOP','Engineering Workshop')
+      .replace('LABORATORY','Lab').replace('SIMULATOR','Sim')
+      .replace('AUTOMATIC CONTROL SYSTEM','ACS')
+      .replace('LIQUID CARGO HANDLING','LCH')
+      .replace('ENGINE ROOM CERTIFICATION','ERC')
+      .replace('ENGINE ROOM GRAPHICS','ERG')
+      .replace('LANGUAGE TRAINING','Lang. Training')
+      .replace('NAVIGATION AIDS','Navigation Aids')
+      .replace('SHIP OPERATIONAL','Ship Ops')
+      .replace('MARINE ENGINEERING','Marine Eng.')
+      .replace('ELECTRIC AND ELECTRONIC','EEL')
+      .replace('CARGO HANDLING','Cargo Handling')
+      .replace('BRIEFING ROOM','Briefing Room')
+      .replace(/\s*\(.*?\)/g, '');
+    return `<div class="ov-legend-item">
+      <div class="ov-legend-dot" style="background:${bgColors[i]}"></div>
+      <span>${short}</span>
+    </div>`;
+  }).join('');
+}
+
+// ── Build month tabs ──────────────────────────────────────
+function buildTabs() {
+  const el = document.getElementById('monthTabs');
+  el.innerHTML = MONTHS.map(m =>
+    `<div class="month-tab${m===activeMonth?' active':''}" onclick="switchMonth('${m}')">${m} 2026</div>`
+  ).join('');
+}
+
+// ── Populate lab dropdown ─────────────────────────────────
+function buildLabSelect() {
+  const sel = document.getElementById('labSelect');
+  const labs = DATA[activeMonth].labs;
+  sel.innerHTML = '<option value="ALL">— Semua Lab / Simulator —</option>' +
+    labs.map(l => `<option value="${l}"${l===activeLab?' selected':''}>${l}</option>`).join('');
+}
+
+function switchMonth(m) {
+  activeMonth = m;
+  activeLab = document.getElementById('labSelect').value;
+  buildTabs();
+  buildLabSelect();
+  renderAll();
+}
+
+function toggleMetric(m) {
+  activeMetrics[m] = !activeMetrics[m];
+  const cls = { fr:'active-fr', jlh:'active-jlh', drs:'active-drs' };
+  document.getElementById('btn-'+m).className =
+    'metric-btn' + (activeMetrics[m] ? ' '+cls[m] : '');
+  renderAll();
+}
+
+// ── Filter daily data ─────────────────────────────────────
+function getFiltered() {
+  const lab = document.getElementById('labSelect').value;
+  activeLab = lab;
+  const daily = DATA[activeMonth].daily;
+  return lab === 'ALL' ? daily : daily.filter(d => d.lab === lab);
+}
+
+// ── Aggregate by date ─────────────────────────────────────
+function aggByDate(rows) {
+  const map = {};
+  rows.forEach(r => {
+    if (!map[r.date]) map[r.date] = {date:r.date, fr:0, jlh:0, drs:0};
+    map[r.date].fr  += r.fr;
+    map[r.date].jlh += r.jlh;
+    map[r.date].drs += r.drs;
+  });
+  return Object.values(map).sort((a,b) => a.date-b.date);
+}
+
+// ── Aggregate by lab ──────────────────────────────────────
+function aggByLab(rows) {
+  const map = {};
+  rows.forEach(r => {
+    if (!map[r.lab]) map[r.lab] = {lab:r.lab, fr:0, jlh:0, drs:0};
+    map[r.lab].fr  += r.fr;
+    map[r.lab].jlh += r.jlh;
+    map[r.lab].drs += r.drs;
+  });
+  return Object.values(map).sort((a,b) => b.fr-a.fr);
+}
+
+// ── Summary cards ─────────────────────────────────────────
+function renderCards(rows) {
+  const total = rows.reduce((a,r) => ({fr:a.fr+r.fr, jlh:a.jlh+r.jlh, drs:a.drs+r.drs}), {fr:0,jlh:0,drs:0});
+  const dates = [...new Set(rows.map(r=>r.date))];
+  const labs  = [...new Set(rows.map(r=>r.lab))];
+  document.getElementById('summaryCards').innerHTML = `
+    <div class="card">
+      <div class="card-label">Total Frekuensi</div>
+      <div class="card-value">${total.fr}</div>
+      <div class="card-sub">sesi penggunaan</div>
+    </div>
+    <div class="card card-jlh">
+      <div class="card-label">Total Peserta</div>
+      <div class="card-value">${total.jlh.toLocaleString()}</div>
+      <div class="card-sub">orang</div>
+    </div>
+    <div class="card card-drs">
+      <div class="card-label">Total Durasi</div>
+      <div class="card-value">${total.drs}</div>
+      <div class="card-sub">jam penggunaan</div>
+    </div>
+    <div class="card card-days">
+      <div class="card-label">Hari Aktif</div>
+      <div class="card-value">${dates.length}</div>
+      <div class="card-sub">${labs.length} lab/simulator aktif</div>
+    </div>
+  `;
+}
+
+// ── Main (daily) bar chart — dynamic Y-axis ───────────────
+function renderMainChart(byDate) {
+  const labels = byDate.map(d => `Tgl ${d.date}`);
+
+  // Decide axis assignment
+  const hasFRorDRS = activeMetrics.fr || activeMetrics.drs;
+  const hasJLH     = activeMetrics.jlh;
+  const dualAxis   = hasFRorDRS && hasJLH;
+
+  const datasets = [];
+  if (activeMetrics.fr)
+    datasets.push({ label:'FR (Frekuensi)', data: byDate.map(d=>d.fr),
+      backgroundColor:'rgba(26,74,122,0.85)', borderRadius:4,
+      yAxisID: 'y' });
+  if (activeMetrics.jlh)
+    datasets.push({ label:'JLH (Orang)', data: byDate.map(d=>d.jlh),
+      backgroundColor:'rgba(14,124,97,0.85)', borderRadius:4,
+      yAxisID: dualAxis ? 'y2' : 'y' });
+  if (activeMetrics.drs)
+    datasets.push({ label:'DRS (Jam)', data: byDate.map(d=>d.drs),
+      backgroundColor:'rgba(138,74,10,0.85)', borderRadius:4,
+      yAxisID: 'y' });
+
+  // Dynamic left-axis label
+  let yLeftLabel = '';
+  if (activeMetrics.fr && activeMetrics.drs) yLeftLabel = 'Frekuensi (sesi) / Durasi (jam)';
+  else if (activeMetrics.fr)  yLeftLabel = 'Frekuensi (sesi)';
+  else if (activeMetrics.drs) yLeftLabel = 'Durasi (jam)';
+  else if (hasJLH)            yLeftLabel = 'Jumlah Orang';
+
+  const labFilter = document.getElementById('labSelect').value;
+  document.getElementById('chartTitle').innerHTML =
+    `Utilisasi Harian — ${activeMonth} 2026 <span>${labFilter==='ALL'?'Semua Lab':labFilter}</span>`;
+
+  const scales = {
+    x: { grid:{display:false}, ticks:{font:{size:11}} },
+    y: {
+      position: 'left',
+      beginAtZero: true,
+      display: hasFRorDRS || (!hasFRorDRS && hasJLH),
+      title: { display: true, text: yLeftLabel, font:{size:10} },
+      ticks: { font:{size:10} }
+    }
+  };
+  if (dualAxis) {
+    scales.y2 = {
+      position: 'right',
+      beginAtZero: true,
+      title: { display: true, text: 'Jumlah Orang', font:{size:10} },
+      ticks: { font:{size:10} },
+      grid: { drawOnChartArea: false }
+    };
+  }
+
+  const ctx = document.getElementById('mainChart').getContext('2d');
+  if (mainChartObj) mainChartObj.destroy();
+  mainChartObj = new Chart(ctx, {
+    type: 'bar',
+    data: { labels, datasets },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      interaction: { mode:'index', intersect:false },
+      plugins: {
+        legend: { position:'top', labels:{font:{size:11}} },
+        tooltip: { callbacks: {
+          label: ctx => {
+            const v = ctx.raw;
+            const u = ctx.dataset.label.includes('Orang') ? ' orang'
+                    : ctx.dataset.label.includes('Jam') ? ' jam' : ' sesi';
+            return ` ${ctx.dataset.label}: ${v}${u}`;
+          }
+        }}
+      },
+      scales
+    }
+  });
+}
+
+// ── Per-lab bar chart ─────────────────────────────────────
+function renderLabChart(rows) {
+  const byLab = aggByLab(rows);
+
+  // Build color map consistent with pie charts (same labTotals order → same index → same color)
+  const allLabs = labTotals();
+  const labColorMap = {};
+  allLabs.forEach((d, i) => { labColorMap[d.lab] = LAB_PALETTE[i % LAB_PALETTE.length]; });
+  const labColors = byLab.map(d => labColorMap[d.lab] || '#94a3b8');
+
+  const labels = byLab.map(d => {
+    return d.lab
+               .replace('COMPUTER BASED TRAINING (CBT) 1 & 2','CBT 1&2')
+               .replace('ENGINEERING WORKSHOP','ENG WKSP')
+               .replace('LABORATORY','LAB').replace('SIMULATOR','SIM')
+               .replace('AUTOMATIC CONTROL SYSTEM','ACS')
+               .replace('LIQUID CARGO HANDLING','LCH')
+               .replace('ENGINE ROOM CERTIFICATION','ERC')
+               .replace('ENGINE ROOM GRAPHICS','ERG')
+               .replace('LANGUAGE TRAINING','LANG TRG')
+               .replace('NAVIGATION AIDS','NAV AIDS')
+               .replace('SHIP OPERATIONAL','SHIP OPS')
+               .replace('MARINE ENGINEERING','MARINE ENG')
+               .replace('ELECTRIC AND ELECTRONIC','EEL')
+               .replace('CARGO HANDLING','CHL')
+               .replace('BRIEFING ROOM','BRIEF ROOM')
+               .replace(' (','').replace(')','');
+  });
+
+  // Each bar gets its lab's palette color; metric differentiated by opacity
+  const datasets = [];
+  if (activeMetrics.fr)
+    datasets.push({ label:'FR (Frekuensi)', data:byLab.map(d=>d.fr),
+      backgroundColor: labColors, borderRadius:4 });
+  if (activeMetrics.jlh)
+    datasets.push({ label:'JLH (Orang)', data:byLab.map(d=>d.jlh),
+      backgroundColor: labColors.map(c => c + 'aa'), borderRadius:4 });
+  if (activeMetrics.drs)
+    datasets.push({ label:'DRS (Jam)', data:byLab.map(d=>d.drs),
+      backgroundColor: labColors.map(c => c + '77'), borderRadius:4 });
+
+  const ctx = document.getElementById('labChart').getContext('2d');
+  if (labChartObj) labChartObj.destroy();
+  labChartObj = new Chart(ctx, {
+    type: 'bar',
+    data: { labels, datasets },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend:{ position:'top', labels:{font:{size:11}} } },
+      scales: {
+        x: { grid:{display:false}, ticks:{font:{size:9}, maxRotation:30} },
+        y: { beginAtZero:true, ticks:{font:{size:10}} }
+      }
+    }
+  });
+}
+
+// ── Data table ────────────────────────────────────────────
+function renderTable(rows) {
+  const labFilter = document.getElementById('labSelect').value;
+  document.getElementById('tableTitle').textContent =
+    `Data Harian Detail — ${activeMonth} 2026`;
+
+  if (!rows.length) {
+    document.getElementById('tableBody').innerHTML =
+      `<div class="no-data"><div class="no-data-icon">📋</div>Tidak ada data untuk filter ini.</div>`;
+    return;
+  }
+
+  const sorted = [...rows].sort((a,b) => a.date===b.date ? a.lab.localeCompare(b.lab) : a.date-b.date);
+  let html = `<table><thead><tr>
+    <th>Tanggal</th><th>Nama Lab / Simulator</th>
+    <th>FR (Frekuensi)</th><th>JLH (Orang)</th><th>DRS (Jam)</th>
+  </tr></thead><tbody>`;
+  let lastDate = null;
+  sorted.forEach(r => {
+    const dateCell = r.date !== lastDate ? `<td rowspan="${sorted.filter(x=>x.date===r.date).length}"><strong>${activeMonth.substring(0,3)} ${r.date}</strong></td>` : '';
+    if (r.date !== lastDate) lastDate = r.date;
+    html += `<tr>
+      ${r.date !== lastDate && dateCell === '' ? '' : dateCell}
+      <td>${r.lab}</td>
+      <td><span class="badge badge-fr">${r.fr}</span></td>
+      <td><span class="badge badge-jlh">${r.jlh}</span></td>
+      <td><span class="badge badge-drs">${r.drs} jam</span></td>
+    </tr>`;
+    if (dateCell !== '') lastDate = r.date;
+  });
+  html += '</tbody></table>';
+  // Simple table without rowspan complexity
+  let html2 = `<table><thead><tr>
+    <th>Tanggal</th><th>Nama Lab / Simulator</th>
+    <th>FR (Frekuensi)</th><th>JLH (Orang)</th><th>DRS (Jam)</th>
+  </tr></thead><tbody>`;
+  sorted.forEach(r => {
+    html2 += `<tr>
+      <td><strong>${r.date} ${activeMonth.substring(0,3)}</strong></td>
+      <td>${r.lab}</td>
+      <td><span class="badge badge-fr">${r.fr} sesi</span></td>
+      <td><span class="badge badge-jlh">${r.jlh} orang</span></td>
+      <td><span class="badge badge-drs">${r.drs} jam</span></td>
+    </tr>`;
+  });
+  html2 += '</tbody></table>';
+  document.getElementById('tableBody').innerHTML = html2;
+}
+
+// ── Main render ───────────────────────────────────────────
+function renderAll() {
+  const filtered = getFiltered();
+  const byDate   = aggByDate(filtered);
+  renderCards(filtered);
+  renderMonthlyOverview();   // re-render to update active highlight
+  renderMainChart(byDate);
+  renderLabChart(filtered);
+  renderTable(filtered);
+}
+
+// ── Init ──────────────────────────────────────────────────
+buildTabs();
+buildLabSelect();
+renderAll();
+</script>
+</body>
+</html>

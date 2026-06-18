@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(New-Item -ItemType Directory -Force \"D:\\\\SPP\\\\Project Dashboard SPP\\\\deploy\")",
+      "Bash(Out-Null)",
+      "Bash(Copy-Item \"D:\\\\SPP\\\\Project Dashboard SPP\\\\Grafik Utilisasi SPP\\\\Dashboard Utilisasi SPP 2026.html\" \"D:\\\\SPP\\\\Project Dashboard SPP\\\\deploy\\\\index.html\")",
+      "Bash(Write-Host \"Done\")",
+      "PowerShell(New-Item -ItemType Directory -Force \"D:\\\\SPP\\\\Project Dashboard SPP\\\\deploy\")",
+      "PowerShell(Copy-Item \"D:\\\\SPP\\\\Project Dashboard SPP\\\\Grafik Utilisasi SPP\\\\Dashboard Utilisasi SPP 2026.html\" \"D:\\\\SPP\\\\Project Dashboard SPP\\\\deploy\\\\index.html\")",
+      "mcp__Claude_in_Chrome__navigate",
+      "mcp__Claude_in_Chrome__tabs_context_mcp"
+    ]
+  }
+}

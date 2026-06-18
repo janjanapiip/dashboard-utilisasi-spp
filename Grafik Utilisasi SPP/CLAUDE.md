@@ -1,0 +1,8 @@
+Create a report dashboard that fully adjustable based on metrics, months, lab / simulator. These are position sequences from top:
+1. Title 
+2. Month selection tab
+3. Name of laboratory / simulator drop down menu, metrics selection
+4. Pie charts report recapitulation in metrics (FR, JLH, DRS) in a year to show each lab / simulator distribution.
+5. Bar chart titled 'Utilisasi Per Lab / Simulator' followed by 'name of each lab / simulator' data that fit to No. 3 selection 
+6. Bar chart titled 'Utilisasi Harian - 'Month_name' 'year' ' shows X-Axis for each date per month sequentially and Y-Axis scale fit to selected metrics automatically.
+7. 'Data Harian Detail' - 'Month' 'Year' that enclose daily log table usage: 'Tanggal' 'Nama Lab / Simulator' 'Users' 'FR (Frekuensi)' 'JLH (Orang) 'DRS (Durasi Jam)'
